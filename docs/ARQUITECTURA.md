@@ -264,6 +264,17 @@ tests/e2e/             Playwright
   `payments` queda como historial. Categorías con `kind`: tipos de juntada y categorías
   de gasto. Rankings temáticos por tipo de juntada (sin ranking deportivo).
 
+- **ADR-020** Calendario y panel de notificaciones (migración 0009):
+  - Eventos con asistencia (`event_rsvps`); 1 evento = 1 juntada (`convert_event_to_juntada`);
+    eliminar = cancelar, bloqueado si su juntada tiene gastos.
+  - Feriados desde ArgentinaDatos (`api.argentinadatos.com/v1/feriados/{año}`), cargados por
+    el cron y al abrir el calendario; si la API falla, el calendario sigue funcionando.
+  - Dos crons diarios (el plan Hobby solo permite frecuencia diaria): 8:00 AR (cumpleaños,
+    frase de los lunes, eventos del día) y 10:00 AR (deudas, eventos de mañana, feriados).
+    **No hay recordatorio "2 horas antes"**: requeriría un cron por hora (plan pago).
+  - Mensajes editables por admins (`notification_messages`), con `{nombre}` como variable;
+    envíos manuales registrados en `notification_log` (kind `broadcast`).
+
 ## 10. Riesgos y limitaciones conocidas
 
 - Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de

@@ -48,9 +48,13 @@ export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memb
   );
 }
 
-/** "¡Te pagaron, perrita!": a quien recibe una transferencia (si no la registró ella). */
+/**
+ * "¡Te pagaron, perrita!": a quien recibe una transferencia (si no la registró ella).
+ * Si la registró quien cobra, le avisamos a quien pagó que quedó confirmado.
+ */
 export async function notifyPaid(juntadaId: string, fromId: string, toId: string, amountCents: number, actorId: string) {
-  if (!pushConfigured() || toId === actorId) return;
+  if (!pushConfigured()) return;
+  if (toId === actorId) return notifyPaymentConfirmed(juntadaId, fromId, toId, amountCents);
   const admin = createAdminClient();
   const [{ data: j }, { data: subs }, from] = await Promise.all([
     admin.from("juntadas").select("title, currency").eq("id", juntadaId).single(),
@@ -61,6 +65,23 @@ export async function notifyPaid(juntadaId: string, fromId: string, toId: string
   await sendToMember(toId, {
     title: "¡Te pagaron, perrita!",
     body: `${from} te transfirió ${formatMoney(amountCents, j.currency, { round: true })} por ${j.title}`,
+    url: `/gastos/${juntadaId}`,
+    tag: `pago-${juntadaId}`,
+  }, subs as Sub[]);
+}
+
+/** Quien cobró marcó "Pagado": se lo confirmamos a quien transfirió. */
+async function notifyPaymentConfirmed(juntadaId: string, fromId: string, toId: string, amountCents: number) {
+  const admin = createAdminClient();
+  const [{ data: j }, { data: subs }, to] = await Promise.all([
+    admin.from("juntadas").select("title, currency").eq("id", juntadaId).single(),
+    admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").eq("member_id", fromId),
+    nameOf(admin, toId),
+  ]);
+  if (!j || !subs?.length) return;
+  await sendToMember(fromId, {
+    title: "¡Pago confirmado!",
+    body: `${to} confirmó que le transferiste ${formatMoney(amountCents, j.currency, { round: true })} por ${j.title}`,
     url: `/gastos/${juntadaId}`,
     tag: `pago-${juntadaId}`,
   }, subs as Sub[]);

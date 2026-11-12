@@ -18,6 +18,7 @@ import { PhotoUploader } from "@/components/photos/photo-uploader";
 import { JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
 import { getAliases } from "@/lib/profile/aliases";
 import { CopyAlias } from "@/components/copy-alias";
+import { MapsLink } from "@/components/maps-link";
 
 export const metadata: Metadata = { title: "Juntada · MAMANÍ CLUB" };
 
@@ -61,6 +62,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-dark">{type?.name ?? "Juntada"}</p>
           <h1 className="mt-1 font-display text-[1.9rem] leading-tight font-semibold">{j.title}</h1>
           <p className="mt-1 text-sm text-graphite/60 first-letter:uppercase">{formatDayLong(j.occurred_on)}</p>
+          {j.location && <MapsLink location={j.location} />}
         </div>
         {canEditJuntada && (
           <Link href={`/gastos/${j.id}/editar`} aria-label="Editar juntada" className="inline-flex size-10 items-center justify-center rounded-full bg-white/70 ring-1 ring-graphite/10">
@@ -128,14 +130,24 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
       <section className="mb-8">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-display text-xl">Gastos</h2>
-          {canAddGasto ? (
-            <Link href={`/gastos/${j.id}/gasto/nuevo`} className="inline-flex items-center gap-1 text-sm font-semibold text-rose-dark"><Plus className="size-4" /> Agregar gasto</Link>
-          ) : active && <span className="text-xs text-graphite/50">Saldada: no se agregan más gastos</span>}
+          {!canAddGasto && active && <span className="text-xs text-graphite/50">Saldada: no se agregan más gastos</span>}
         </div>
+        {canAddGasto && (
+          <Link
+            href={`/gastos/${j.id}/gasto/nuevo`}
+            className="group mb-3 flex items-center gap-4 rounded-[var(--radius-card)] bg-rose p-4 text-graphite shadow-lg shadow-rose/30 ring-4 ring-lime/70 transition hover:brightness-105 active:scale-[0.99]"
+          >
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-graphite text-lime transition group-hover:rotate-90">
+              <Plus className="size-6" strokeWidth={2.5} />
+            </span>
+            <span className="flex-1">
+              <span className="block font-display text-xl font-semibold">Agregar gasto</span>
+              <span className="text-sm text-graphite/75">{gastos.length === 0 ? "Cargá lo que se pagó en esta juntada" : "¿Alguien pagó algo más?"}</span>
+            </span>
+          </Link>
+        )}
         {gastos.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-rose/40 p-5 text-center text-sm text-graphite/60">
-            Todavía no hay gastos. {canAddGasto && <Link href={`/gastos/${j.id}/gasto/nuevo`} className="font-semibold text-rose-dark">Cargá el primero</Link>}
-          </div>
+          <div className="rounded-2xl border border-dashed border-rose/40 p-5 text-center text-sm text-graphite/60">Todavía no hay gastos.</div>
         ) : (
           <ul className="flex flex-col gap-2">
             {gastos.map((g, i) => {

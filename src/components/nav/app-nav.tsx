@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/brand";
-import { ADMIN_ITEM, MEMORIES_ITEM, NAV_ITEMS, isActive } from "./nav-items";
+import { ADMIN_ITEM, MEMORIES_ITEM, NAV_ITEMS, RANKINGS_ITEM, isActive } from "./nav-items";
 
 export function BottomNav({ pendingRequests = 0 }: { pendingRequests?: number }) {
   const pathname = usePathname();
@@ -58,7 +58,7 @@ export function BottomNav({ pendingRequests = 0 }: { pendingRequests?: number })
 
 export function SideNav({ isAdmin, pendingRequests = 0 }: { isAdmin: boolean; pendingRequests?: number }) {
   const pathname = usePathname();
-  const base = [...NAV_ITEMS.slice(0, 4), MEMORIES_ITEM, ...NAV_ITEMS.slice(4)];
+  const base = [...NAV_ITEMS.slice(0, 4), RANKINGS_ITEM, MEMORIES_ITEM, ...NAV_ITEMS.slice(4)];
   const items = isAdmin ? [...base, ADMIN_ITEM] : base;
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-graphite/5 px-5 py-8 lg:flex">

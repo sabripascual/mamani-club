@@ -38,6 +38,7 @@ export type Juntada = {
   occurred_on: string;
   type_id: string;
   description: string | null;
+  location: string | null;
   currency: string;
   created_by: string;
   status: "active" | "void";

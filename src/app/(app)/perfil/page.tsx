@@ -100,7 +100,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <ShieldCheck className="size-5 text-lime" />
           <span className="flex-1">
             <strong>Administración</strong>
-            <span className="block text-sm text-cream/70">Solicitudes, integrantes, categorías y auditoría</span>
+            <span className="block text-sm text-cream/70">Solicitudes, integrantes, categorías, notificaciones y auditoría</span>
           </span>
           {pendingRequests > 0 && (
             <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-rose px-2 py-0.5 text-sm font-bold text-graphite">{pendingRequests}</span>
@@ -109,10 +109,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         </Link>
       )}
 
-      <h2 className="mt-10 mb-1 font-display text-xl">Recordatorios de deudas</h2>
+      <h2 className="mt-10 mb-1 font-display text-xl">Notificaciones</h2>
       <p className="mb-3 text-sm text-graphite/60">
-        A las 10 de la mañana te avisamos si debés en alguna juntada (todos los días) o si te deben a vos (cada 2 días).
-        Se cortan solos cuando se salda la deuda.
+        Deudas (10:00), cumpleaños, eventos y la frase de los lunes (8:00), y avisos cuando te cargan un gasto o te pagan.
       </p>
       <Card><PushToggle vapidKey={vapidPublicKey()} /></Card>
 

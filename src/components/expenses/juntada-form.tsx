@@ -11,7 +11,7 @@ import { GastoFields } from "./gasto-fields";
 import { CategoryIcon } from "./category-icon";
 import { MemberAvatar } from "./member-avatar";
 
-export type JuntadaInitial = { title: string; occurred_on: string; type_id: string; description: string | null; attendees: string[] };
+export type JuntadaInitial = { title: string; occurred_on: string; type_id: string; description: string | null; attendees: string[]; location?: string | null };
 
 /** Crear o editar una juntada. Al crear, opcionalmente se carga el primer gasto. */
 export function JuntadaForm({
@@ -39,6 +39,8 @@ export function JuntadaForm({
         <>
           <Field label="Nombre de la juntada" name="j_title" placeholder="Ej: Asado en lo de Sofi" defaultValue={initial?.title} error={errors.title} maxLength={80} />
           <Field label="¿Cuándo es o fue?" name="j_occurred_on" type="date" defaultValue={initial?.occurred_on ?? today} error={errors.occurred_on} className="max-w-xs" />
+          <Field label="¿Dónde?" name="j_location" placeholder="Ej: Casa de Caro, Palermo" defaultValue={initial?.location ?? ""} error={errors.location} maxLength={200}
+            hint="Opcional. Se abre en Google Maps." />
 
           <fieldset>
             <legend className="mb-2 text-sm font-semibold text-graphite/80">Tipo de juntada</legend>

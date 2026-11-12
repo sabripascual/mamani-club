@@ -7,7 +7,7 @@ import type {
 } from "./types";
 export type { JuntadaListItem };
 
-const JUNTADA_COLUMNS = "id, title, occurred_on, type_id, description, currency, created_by, status, void_reason, created_at, updated_at";
+const JUNTADA_COLUMNS = "id, title, occurred_on, type_id, description, location, currency, created_by, status, void_reason, created_at, updated_at";
 const GASTO_COLUMNS =
   "id, juntada_id, title, occurred_on, amount_cents, currency, base_amount_cents, category_id, subcategory_id, description, paid_by, created_by, split_type, status, void_reason, created_at, updated_at, fx_rate, fx_rate_date";
 
