@@ -24,7 +24,7 @@ export default async function EditJuntadaPage({ params }: { params: Promise<{ id
       <Link href={`/gastos/${id}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite"><ArrowLeft className="size-4" /> Volver</Link>
       <PageHeader eyebrow="Editar juntada" title={j.title} />
       <JuntadaForm action={updateJuntada.bind(null, id)} types={types} gastoCategories={gastoCats} members={members} meId={profile.id} today={todayAR()}
-        initial={{ title: j.title, occurred_on: j.occurred_on, type_id: j.type_id, description: j.description, attendees }} />
+        initial={{ title: j.title, occurred_on: j.occurred_on, type_id: j.type_id, description: j.description, attendees, location: j.location }} />
     </>
   );
 }

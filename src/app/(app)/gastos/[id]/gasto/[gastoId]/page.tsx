@@ -10,6 +10,9 @@ import { formatTimestamp } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import { CategoryIcon } from "@/components/expenses/category-icon";
 import { MemberAvatar, memberName } from "@/components/expenses/member-avatar";
+import { getAliases } from "@/lib/profile/aliases";
+import { CopyAlias } from "@/components/copy-alias";
+import { SettleButton } from "../../actions-client";
 
 export const metadata: Metadata = { title: "Gasto · MAMANÍ CLUB" };
 
@@ -29,6 +32,12 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
   const cat = catById.get(g.category_id);
   const sub = g.subcategory_id ? catById.get(g.subcategory_id) : undefined;
   const parts = shares.filter((s) => s.is_participant).sort((a, b) => b.amount_cents - a.amount_cents);
+  // Lo que YO debo en esta juntada (pago neto), con el alias de quien cobra.
+  const { data: myTransfers } = await supabase.rpc("juntada_transfers", { p_juntada: id });
+  const mine = ((myTransfers ?? []) as { from_member: string; to_member: string; amount_cents: number }[])
+    .filter((t) => t.from_member === me && juntada?.status === "active")
+    .map((t) => ({ ...t, amount_cents: Number(t.amount_cents) }));
+  const aliasesBy = await getAliases(mine.map((t) => t.to_member));
 
   return (
     <>
@@ -61,6 +70,30 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
         </div>
         {g.description && <p className="mt-4 whitespace-pre-line text-sm text-graphite/75">{g.description}</p>}
       </Card>
+
+      {mine.length > 0 && (
+        <section className="mb-6 rounded-[var(--radius-card)] bg-rose/15 p-4 ring-1 ring-rose/30">
+          <h2 className="mb-1 font-display text-lg font-semibold">Lo que tenés que transferir</h2>
+          <p className="mb-3 text-xs text-graphite/60">Es tu saldo en toda la juntada (puede incluir otros gastos).</p>
+          <ul className="flex flex-col gap-2">
+            {mine.map((t) => {
+              const al = aliasesBy.get(t.to_member)?.[0];
+              return (
+                <li key={t.to_member} className="flex items-center gap-3 rounded-2xl bg-white p-3">
+                  <MemberAvatar m={memberById.get(t.to_member)} />
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p>A <strong>{memberName(memberById.get(t.to_member))}</strong>: <strong className="tabular-nums">{formatMoney(t.amount_cents, g.currency)}</strong></p>
+                    {al ? (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-graphite/65">alias <span className="truncate font-mono font-semibold text-graphite">{al.alias}</span><CopyAlias alias={al.alias} label /></p>
+                    ) : <p className="mt-1 text-xs text-graphite/45">Todavía no cargó alias</p>}
+                  </div>
+                  <SettleButton juntadaId={id} from={me} to={t.to_member} amountCents={t.amount_cents} alias={al?.alias} meId={me} />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <h2 className="mb-3 font-display text-xl">Parte de cada una</h2>
       <ul className="mb-8 flex flex-col gap-2">

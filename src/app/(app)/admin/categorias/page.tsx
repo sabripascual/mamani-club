@@ -20,7 +20,7 @@ export default async function CategoriesAdminPage({ searchParams }: { searchPara
     <>
       <h1 className="mb-1 font-display text-[1.8rem] font-semibold">Categorías</h1>
       <p className="mb-4 text-sm text-graphite/60">
-        Archivar oculta la opción para cargas nuevas; lo ya cargado no cambia. Renombrar no afecta los rankings.
+        Borrar solo se puede si nunca se usó. Si ya tiene juntadas o gastos, archivala: se oculta para cargas nuevas y el historial no cambia.
       </p>
       <div className="mb-5 inline-flex rounded-full bg-white/70 p-1 ring-1 ring-graphite/10">
         {[["juntadas", "Tipos de juntada", kind === "juntada"], ["gastos", "Categorías de gasto", kind === "gasto"]].map(([v, label, on]) => (

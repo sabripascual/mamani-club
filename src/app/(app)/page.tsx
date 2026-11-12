@@ -7,6 +7,8 @@ import { pendingRequestsCount } from "@/lib/admin/pending";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getJuntadaTypes, getMemberBalances, getMembers, listJuntadas } from "@/lib/expenses/queries";
 import { RecentExpenses } from "@/components/expenses/recent-expenses";
+import { birthdaysToday } from "@/lib/calendar/queries";
+import { CalendarDays, Images, Trophy } from "lucide-react";
 import { loadDataset, parsePeriod, type PeriodParams } from "@/lib/stats/load";
 import { formatMoney } from "@/lib/money/format";
 import { todayAR } from "@/lib/dates";
@@ -31,9 +33,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     loadDataset(), getMemberBalances(profile.id), getJuntadaTypes(), getMembers(), getAlbums({ limit: 12 }), listJuntadas({}, 3),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
-  const [pendingRequests, myAvatar] = await Promise.all([
+  const [pendingRequests, myAvatar, cumples] = await Promise.all([
     profile.role === "admin" ? pendingRequestsCount() : Promise.resolve(0),
     signAvatarUrls([profile.avatar_path]).then((m) => (profile.avatar_path ? (m.get(profile.avatar_path) ?? null) : null)),
+    birthdaysToday(today),
   ]);
   const { filters } = parsePeriod(sp, today);
 
@@ -49,7 +52,27 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </span>
         </Link>
       </header>
+      {cumples.length > 0 && (
+        <div className="relative mb-6 overflow-hidden rounded-[var(--radius-card)] bg-rose p-5 text-graphite ring-4 ring-lime/70">
+          <span aria-hidden className="absolute -top-3 -right-2 text-6xl opacity-80">🎉</span>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em]">¡Hoy hay cumple!</p>
+          <p className="mt-1 font-display text-2xl font-semibold">
+            {cumples.map((c) => (c.id === profile.id ? "¡Vos! 🎂" : `${c.name} cumple ${c.age}`)).join(" · ")}
+          </p>
+          <p className="mt-1 text-sm text-graphite/75">{cumples.some((c) => c.id === profile.id) ? "Feliz cumple, perrita. Te queremos 💖" : "Saluden a la perrita 💖"}</p>
+        </div>
+      )}
       <PendingRequestsBanner count={pendingRequests} />
+      <nav aria-label="Accesos rápidos" className="-mx-5 mb-6 flex gap-2 overflow-x-auto px-5 pb-1 lg:hidden [scrollbar-width:none]">
+        {[["/calendario", "Calendario", CalendarDays], ["/rankings", "Rankings", Trophy], ["/recuerdos", "Memories", Images]].map(([href, label, Icon]) => {
+          const I = Icon as typeof Trophy;
+          return (
+            <Link key={href as string} href={href as string} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-white/70 px-4 text-sm font-semibold ring-1 ring-graphite/10">
+              <I className="size-4 text-rose-dark" /> {label as string}
+            </Link>
+          );
+        })}
+      </nav>
       {!profile.birth_date && (
         <Link href="/perfil/editar" className="mb-6 flex items-center gap-3 rounded-[var(--radius-card)] bg-blush p-4 text-sm transition hover:brightness-95">
           <span className="text-2xl">🎂</span>

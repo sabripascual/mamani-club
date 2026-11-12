@@ -128,12 +128,14 @@ const juntadaSchema = z.object({
   description: z.string().trim().max(500).optional().transform((v) => v || null),
   attendees: z.array(uuid),
   reason: z.string().trim().max(200).optional().transform((v) => v || null),
+  location: z.string().trim().max(200).optional().transform((v) => v || null),
 });
 
 function readJuntada(formData: FormData) {
   return juntadaSchema.safeParse({
     title: formData.get("j_title") ?? "", occurred_on: formData.get("j_occurred_on") ?? "", type_id: formData.get("j_type_id") ?? "",
     description: formData.get("j_description") ?? "", attendees: formData.getAll("j_attendees").map(String), reason: formData.get("j_reason") ?? "",
+    location: formData.get("j_location") ?? "",
   });
 }
 
@@ -154,7 +156,7 @@ export async function createJuntada(_: FormState, formData: FormData): Promise<F
   const { data: { user } } = await supabase.auth.getUser();
   const { data: id, error } = await supabase.rpc("create_juntada", {
     p_title: j.data.title, p_occurred_on: j.data.occurred_on, p_type_id: j.data.type_id,
-    p_attendees: j.data.attendees, p_description: j.data.description,
+    p_attendees: j.data.attendees, p_description: j.data.description, p_location: j.data.location,
   });
   if (error) return { error: error.message };
   const juntadaId = id as string;
@@ -178,7 +180,7 @@ export async function updateJuntada(juntadaId: string, _: FormState, formData: F
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_juntada", {
     p_juntada_id: juntadaId, p_title: j.data.title, p_occurred_on: j.data.occurred_on, p_type_id: j.data.type_id,
-    p_description: j.data.description, p_reason: j.data.reason,
+    p_description: j.data.description, p_reason: j.data.reason, p_location: j.data.location,
   });
   if (error) return { error: error.message };
   refresh(juntadaId);

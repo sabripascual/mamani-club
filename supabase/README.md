@@ -16,7 +16,8 @@
 | 0005_notificaciones.sql | Dispositivos para push y registro de envíos | ✅ |
 | 0006_solicitudes_contrasena.sql | Pedidos de contraseña nueva aprobados por admins | ✅ |
 | 0007_juntadas_multigasto.sql | Juntadas con varios gastos, asistentes, transferencias netas, tipos de juntada | ✅ |
-| 0008_perfil_alias_y_reglas.sql | Fecha de nacimiento, alias (hasta 5), juntada saldada sin gastos nuevos, subcategoría obligatoria | ⏳ |
+| 0008_perfil_alias_y_reglas.sql | Fecha de nacimiento, alias (hasta 5), juntada saldada sin gastos nuevos, subcategoría obligatoria | ✅ |
+| 0009_calendario_y_notificaciones.sql | Eventos y asistencia, feriados, ubicación, borrar categorías sin uso, mensajes de notificación | ⏳ |
 
 ## Correr las pruebas localmente
 

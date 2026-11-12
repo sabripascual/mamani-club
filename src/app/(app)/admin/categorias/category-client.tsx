@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Archive, ArchiveRestore, Pencil, Plus } from "lucide-react";
-import { addCategory, renameCategory, setCategoryArchived, type CatResult } from "@/lib/admin/category-actions";
+import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from "lucide-react";
+import { addCategory, deleteCategory, renameCategory, setCategoryArchived, type CatResult } from "@/lib/admin/category-actions";
 
 function useRun() {
   const [pending, start] = useTransition();
@@ -21,7 +21,7 @@ export function CategoryItemActions({ id, name, archived }: { id: string; name: 
   const { pending, error, run } = useRun();
   return (
     <span className="flex items-center gap-0.5">
-      {error && <span className="mr-2 text-xs text-rose-dark">{error}</span>}
+      {error && <span className="mr-2 max-w-48 text-right text-xs text-rose-dark">{error}</span>}
       <button className={iconBtn} disabled={pending} aria-label={`Renombrar ${name}`}
         onClick={() => { const n = window.prompt("Nuevo nombre", name); if (n && n.trim() !== name) run(() => renameCategory(id, n)); }}>
         <Pencil className="size-4" />
@@ -29,6 +29,10 @@ export function CategoryItemActions({ id, name, archived }: { id: string; name: 
       <button className={iconBtn} disabled={pending} aria-label={archived ? `Restaurar ${name}` : `Archivar ${name}`}
         onClick={() => run(() => setCategoryArchived(id, !archived))}>
         {archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+      </button>
+      <button className={iconBtn} disabled={pending} aria-label={`Borrar ${name}`}
+        onClick={() => { if (window.confirm(`¿Borrar “${name}”? Solo se puede si nunca se usó.`)) run(() => deleteCategory(id)); }}>
+        <Trash2 className="size-4" />
       </button>
     </span>
   );

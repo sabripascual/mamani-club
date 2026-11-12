@@ -45,3 +45,13 @@ export async function setCategoryArchived(id: string, archived: boolean): Promis
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/** Borra una categoría/subcategoría que nunca se usó (si se usó, la base pide archivarla). */
+export async function deleteCategory(id: string): Promise<CatResult> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_delete_category", { p_category_id: id });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

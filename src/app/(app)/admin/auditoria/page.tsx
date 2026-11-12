@@ -38,6 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ENTITY_LABELS: Record<string, string> = {
+  events: "Evento", notification_messages: "Mensaje de notificación",
   profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", juntadas: "Juntada", expenses: "Gasto", payments: "Pago (histórico)", settlements: "Transferencia", photos: "Foto", photo_comments: "Comentario", password_reset_requests: "Pedido de contraseña",
 };
 

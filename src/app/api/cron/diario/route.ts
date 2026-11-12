@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runDailyNotifications } from "@/lib/push/daily";
 import { pushConfigured } from "@/lib/push/send";
+import { runEventEve } from "@/lib/push/calendar-daily";
+import { ensureHolidays } from "@/lib/calendar/holidays";
 
 export const maxDuration = 60;
 
 /**
  * Cron diario (Vercel, 13:00 UTC = 10:00 Argentina):
  *  1. mantiene activo el proyecto de Supabase (plan gratuito);
- *  2. manda las notificaciones push de deudas.
+ *  2. carga los feriados del año si faltan;
+ *  3. manda las notificaciones de deudas y los recordatorios de eventos de mañana.
  */
 export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -16,10 +19,15 @@ export async function GET(request: Request) {
   }
   const { error } = await createAdminClient().from("group_settings").select("id").limit(1);
   if (error) return NextResponse.json({ ok: false, step: "keepalive" }, { status: 500 });
+  // Feriados del año (y del siguiente, desde diciembre).
+  const now = new Date();
+  await ensureHolidays(now.getUTCFullYear());
+  if (now.getUTCMonth() === 11) await ensureHolidays(now.getUTCFullYear() + 1);
   if (!pushConfigured()) return NextResponse.json({ ok: true, push: "sin claves VAPID" });
   try {
     const result = await runDailyNotifications();
-    return NextResponse.json({ ok: true, ...result });
+    const eve = await runEventEve();
+    return NextResponse.json({ ok: true, ...result, eventos: eve });
   } catch {
     return NextResponse.json({ ok: false, step: "push" }, { status: 500 });
   }
