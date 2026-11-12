@@ -3,26 +3,29 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { signAvatarUrls } from "@/lib/storage/avatars";
 import type {
-  Category, CategoryTree, DebtRow, ExpenseRow, ExpenseStatusRow, Member, MemberBalance, Payment, ShareBalance,
+  Category, CategoryKind, CategoryTree, Gasto, Juntada, JuntadaListItem, JuntadaStatusRow, Member, MemberBalance, MemberNet, Settlement, Share, Transfer,
 } from "./types";
+export type { JuntadaListItem };
 
-const EXPENSE_COLUMNS =
-  "id, title, occurred_on, amount_cents, currency, base_amount_cents, category_id, subcategory_id, description, paid_by, created_by, split_type, status, void_reason, created_at, updated_at, fx_rate, fx_rate_date";
+const JUNTADA_COLUMNS = "id, title, occurred_on, type_id, description, currency, created_by, status, void_reason, created_at, updated_at";
+const GASTO_COLUMNS =
+  "id, juntada_id, title, occurred_on, amount_cents, currency, base_amount_cents, category_id, subcategory_id, description, paid_by, created_by, split_type, status, void_reason, created_at, updated_at, fx_rate, fx_rate_date";
 
 // PostgREST devuelve bigint como number (o string si es muy grande). Normalizamos.
 const num = (v: unknown) => Number(v ?? 0);
 
-export const getCategories = cache(async (includeArchived = false) => {
+/** Categorías de un tipo: "gasto" (con subcategorías) o "juntada" (tipos de juntada). */
+export const getCategories = cache(async (includeArchived = false, kind: CategoryKind = "gasto") => {
   const supabase = await createClient();
-  let q = supabase.from("categories").select("id, parent_id, code, name, icon, sort_order, archived").order("sort_order");
+  let q = supabase.from("categories").select("id, parent_id, kind, code, name, icon, sort_order, archived").eq("kind", kind).order("sort_order");
   if (!includeArchived) q = q.eq("archived", false);
   const { data } = await q.returns<Category[]>();
   const all = data ?? [];
-  const tree: CategoryTree = all
-    .filter((c) => !c.parent_id)
-    .map((c) => ({ ...c, children: all.filter((s) => s.parent_id === c.id) }));
+  const tree: CategoryTree = all.filter((c) => !c.parent_id).map((c) => ({ ...c, children: all.filter((s) => s.parent_id === c.id) }));
   return { all, tree, byId: new Map(all.map((c) => [c.id, c])) };
 });
+
+export const getJuntadaTypes = (includeArchived = false) => getCategories(includeArchived, "juntada");
 
 /** Integrantes aprobadas (activas y desactivadas) con avatar firmado. */
 export const getMembers = cache(async () => {
@@ -39,17 +42,17 @@ export const getMembers = cache(async () => {
   return { members, byId: new Map(members.map((m) => [m.id, m])) };
 });
 
-export type ExpenseFilters = {
+export type JuntadaFilters = {
   year?: number;
   month?: number; // 1..12
   from?: string;
   to?: string;
-  categoryId?: string;
+  typeId?: string;
   memberId?: string;
   status?: "pending" | "partial" | "settled";
 };
 
-function dateRange(f: ExpenseFilters): [string | null, string | null] {
+function dateRange(f: JuntadaFilters): [string | null, string | null] {
   if (f.from || f.to) return [f.from ?? null, f.to ?? null];
   if (f.year && f.month) {
     const last = new Date(Date.UTC(f.year, f.month, 0)).getUTCDate();
@@ -60,63 +63,79 @@ function dateRange(f: ExpenseFilters): [string | null, string | null] {
   return [null, null];
 }
 
-export async function listExpenses(filters: ExpenseFilters = {}) {
+
+/** Lista de juntadas con su estado. Filtro por integrante = asistentes. */
+export async function listJuntadas(filters: JuntadaFilters = {}, limit?: number): Promise<JuntadaListItem[]> {
   const supabase = await createClient();
   const [from, to] = dateRange(filters);
-  const select = filters.memberId ? `${EXPENSE_COLUMNS}, expense_shares!inner(member_id)` : EXPENSE_COLUMNS;
-  let q = supabase
-    .from("expenses")
-    .select(select)
-    .eq("status", "active")
-    .order("occurred_on", { ascending: false })
-    .order("created_at", { ascending: false });
+  const select = filters.memberId ? `${JUNTADA_COLUMNS}, juntada_attendees!inner(member_id)` : JUNTADA_COLUMNS;
+  let q = supabase.from("juntadas").select(select).eq("status", "active")
+    .order("occurred_on", { ascending: false }).order("created_at", { ascending: false });
   if (from) q = q.gte("occurred_on", from);
   if (to) q = q.lte("occurred_on", to);
-  if (filters.categoryId) q = q.eq("category_id", filters.categoryId);
-  if (filters.memberId) q = q.eq("expense_shares.member_id", filters.memberId).eq("expense_shares.is_participant", true);
-  const { data } = await q.returns<ExpenseRow[]>();
-  const expenses = (data ?? []).map((e) => ({ ...e, amount_cents: num(e.amount_cents), base_amount_cents: num(e.base_amount_cents) }));
-
-  const ids = expenses.map((e) => e.id);
-  const { data: statuses } = ids.length
-    ? await supabase.from("v_expense_status").select("*").in("expense_id", ids).returns<ExpenseStatusRow[]>()
-    : { data: [] as ExpenseStatusRow[] };
-  const statusById = new Map((statuses ?? []).map((s) => [s.expense_id, { ...s, outstanding_cents: num(s.outstanding_cents) }]));
-
-  const rows = expenses.map((e) => ({ ...e, settlement: statusById.get(e.id) ?? null }));
-  return filters.status ? rows.filter((r) => r.settlement?.settlement_status === filters.status) : rows;
+  if (filters.typeId) q = q.eq("type_id", filters.typeId);
+  if (filters.memberId) q = q.eq("juntada_attendees.member_id", filters.memberId);
+  if (limit) q = q.limit(limit);
+  const { data } = await q.returns<Juntada[]>();
+  const rows = data ?? [];
+  const ids = rows.map((r) => r.id);
+  const { data: st } = ids.length
+    ? await supabase.from("v_juntada_status").select("*").in("juntada_id", ids).returns<JuntadaStatusRow[]>()
+    : { data: [] as JuntadaStatusRow[] };
+  const byId = new Map((st ?? []).map((s) => [s.juntada_id, normStatus(s)]));
+  const out = rows.map((r) => ({ ...r, summary: byId.get(r.id) ?? null }));
+  return filters.status ? out.filter((r) => r.summary?.settlement_status === filters.status) : out;
 }
 
-export async function getExpense(id: string) {
+function normStatus(s: JuntadaStatusRow): JuntadaStatusRow {
+  return { ...s, total_cents: num(s.total_cents), total_base_cents: num(s.total_base_cents), pending_cents: num(s.pending_cents),
+    expenses_count: num(s.expenses_count), attendees_count: num(s.attendees_count) };
+}
+
+/** Todo lo de una juntada: gastos, partes, asistentes, saldos, transferencias sugeridas e historial. */
+export async function getJuntada(id: string) {
   const supabase = await createClient();
-  const { data: expense } = await supabase.from("expenses").select(EXPENSE_COLUMNS).eq("id", id).maybeSingle<ExpenseRow>();
-  if (!expense) return null;
-  const [{ data: shares }, { data: payments }, { data: status }, { data: rawShares }] = await Promise.all([
-    supabase.from("v_share_balances").select("*").eq("expense_id", id).returns<ShareBalance[]>(),
-    supabase.from("payments").select("*").eq("expense_id", id).order("created_at", { ascending: false }).returns<Payment[]>(),
-    supabase.from("v_expense_status").select("*").eq("expense_id", id).maybeSingle<ExpenseStatusRow>(),
-    // Para anuladas la vista no devuelve partes: leemos la tabla.
-    supabase.from("expense_shares").select("id, member_id, amount_cents, is_participant").eq("expense_id", id),
+  const { data: juntada } = await supabase.from("juntadas").select(JUNTADA_COLUMNS).eq("id", id).maybeSingle<Juntada>();
+  if (!juntada) return null;
+  const [{ data: gastos }, { data: attendees }, { data: nets }, { data: transfers }, { data: settlements }, { data: status }] = await Promise.all([
+    supabase.from("expenses").select(GASTO_COLUMNS).eq("juntada_id", id).eq("status", "active").order("created_at").returns<Gasto[]>(),
+    supabase.from("juntada_attendees").select("member_id, created_at").eq("juntada_id", id).order("created_at"),
+    supabase.from("v_juntada_member_balances").select("*").eq("juntada_id", id).returns<MemberNet[]>(),
+    supabase.rpc("juntada_transfers", { p_juntada: id }).returns<Omit<Transfer, "juntada_id" | "currency">[]>(),
+    supabase.from("settlements").select("*").eq("juntada_id", id).order("created_at", { ascending: false }).returns<Settlement[]>(),
+    supabase.from("v_juntada_status").select("*").eq("juntada_id", id).maybeSingle<JuntadaStatusRow>(),
   ]);
+  const gastoIds = (gastos ?? []).map((g) => g.id);
+  const { data: shares } = gastoIds.length
+    ? await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant").in("expense_id", gastoIds).returns<Share[]>()
+    : { data: [] as Share[] };
   return {
-    expense: { ...expense, amount_cents: num(expense.amount_cents), base_amount_cents: num(expense.base_amount_cents) },
-    shares: (shares ?? []).map((s) => ({
-      ...s,
-      amount_cents: num(s.amount_cents),
-      paid_cents: num(s.paid_cents),
-      refunded_cents: num(s.refunded_cents),
-      outstanding_cents: num(s.outstanding_cents),
-    })),
-    rawShares: (rawShares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })),
-    payments: (payments ?? []).map((p) => ({ ...p, amount_cents: num(p.amount_cents) })),
-    status: status ?? null,
+    juntada,
+    gastos: (gastos ?? []).map((g) => ({ ...g, amount_cents: num(g.amount_cents), base_amount_cents: num(g.base_amount_cents) })),
+    shares: (shares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })),
+    attendees: (attendees ?? []).map((a) => a.member_id as string),
+    nets: (nets ?? []).map((n) => ({ ...n, paid_cents: num(n.paid_cents), consumed_cents: num(n.consumed_cents), sent_cents: num(n.sent_cents),
+      received_cents: num(n.received_cents), net_cents: num(n.net_cents) })),
+    transfers: ((transfers ?? []) as Omit<Transfer, "juntada_id" | "currency">[]).map((t) => ({ ...t, amount_cents: num(t.amount_cents) })),
+    settlements: (settlements ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })),
+    status: status ? normStatus(status) : null,
   };
 }
 
-export async function getDebts() {
+/** Un gasto con sus partes (para editarlo). */
+export async function getGasto(id: string) {
   const supabase = await createClient();
-  const { data } = await supabase.from("v_debts").select("*").returns<DebtRow[]>();
-  return (data ?? []).map((d) => ({ ...d, amount_cents: num(d.amount_cents) }));
+  const { data: gasto } = await supabase.from("expenses").select(GASTO_COLUMNS).eq("id", id).maybeSingle<Gasto>();
+  if (!gasto) return null;
+  const { data: shares } = await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant").eq("expense_id", id).returns<Share[]>();
+  return { gasto: { ...gasto, amount_cents: num(gasto.amount_cents) }, shares: (shares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })) };
+}
+
+/** Transferencias pendientes de todas las juntadas (quién le debe a quién). */
+export async function getPendingTransfers() {
+  const supabase = await createClient();
+  const { data } = await supabase.from("v_pending_transfers").select("*").returns<Transfer[]>();
+  return (data ?? []).map((t) => ({ ...t, amount_cents: num(t.amount_cents) }));
 }
 
 export async function getMemberBalances(memberId?: string) {
@@ -126,65 +145,38 @@ export async function getMemberBalances(memberId?: string) {
   const { data } = await q.returns<MemberBalance[]>();
   return (data ?? []).map((b) => ({
     ...b,
-    advanced_cents: num(b.advanced_cents),
-    consumed_cents: num(b.consumed_cents),
-    owed_to_me_cents: num(b.owed_to_me_cents),
-    i_owe_cents: num(b.i_owe_cents),
-    received_cents: num(b.received_cents),
-    sent_cents: num(b.sent_cents),
-    times_paid: num(b.times_paid),
-    expenses_participated: num(b.expenses_participated),
+    advanced_cents: num(b.advanced_cents), consumed_cents: num(b.consumed_cents), owed_to_me_cents: num(b.owed_to_me_cents),
+    i_owe_cents: num(b.i_owe_cents), received_cents: num(b.received_cents), sent_cents: num(b.sent_cents),
+    times_paid: num(b.times_paid), expenses_participated: num(b.expenses_participated),
   }));
 }
 
-/** Movimientos de una integrante: juntadas donde pagó y/o participó, con su situación. */
+/** Movimientos de una integrante: juntadas en las que estuvo o pagó, con su saldo en cada una. */
 export async function getMemberMovements(memberId: string) {
   const supabase = await createClient();
-  const [{ data: paid }, { data: shares }] = await Promise.all([
-    supabase.from("expenses").select(EXPENSE_COLUMNS).eq("status", "active").eq("paid_by", memberId).returns<ExpenseRow[]>(),
-    supabase.from("v_share_balances").select("*").eq("member_id", memberId).returns<ShareBalance[]>(),
+  const [{ data: att }, { data: nets }] = await Promise.all([
+    supabase.from("juntada_attendees").select("juntada_id").eq("member_id", memberId),
+    supabase.from("v_juntada_member_balances").select("*").eq("member_id", memberId).returns<MemberNet[]>(),
   ]);
-  const shareRows = (shares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents), outstanding_cents: num(s.outstanding_cents) }));
-  const ids = [...new Set([...(paid ?? []).map((e) => e.id), ...shareRows.map((s) => s.expense_id)])];
-  const { data: expenses } = ids.length
-    ? await supabase.from("expenses").select(EXPENSE_COLUMNS).in("id", ids).returns<ExpenseRow[]>()
-    : { data: [] as ExpenseRow[] };
-  const { data: statuses } = ids.length
-    ? await supabase.from("v_expense_status").select("*").in("expense_id", ids).returns<ExpenseStatusRow[]>()
-    : { data: [] as ExpenseStatusRow[] };
-  const statusById = new Map((statuses ?? []).map((s) => [s.expense_id, s]));
-  const shareByExpense = new Map(shareRows.map((s) => [s.expense_id, s]));
-
-  return (expenses ?? [])
-    .map((e) => {
-      const share = shareByExpense.get(e.id);
-      const isPayer = e.paid_by === memberId;
+  const ids = [...new Set([...(att ?? []).map((a) => a.juntada_id as string), ...(nets ?? []).map((n) => n.juntada_id)])];
+  if (ids.length === 0) return [];
+  const [{ data: juntadas }, { data: status }] = await Promise.all([
+    supabase.from("juntadas").select(JUNTADA_COLUMNS).in("id", ids).eq("status", "active").returns<Juntada[]>(),
+    supabase.from("v_juntada_status").select("*").in("juntada_id", ids).returns<JuntadaStatusRow[]>(),
+  ]);
+  const netBy = new Map((nets ?? []).map((n) => [n.juntada_id, n]));
+  const stBy = new Map((status ?? []).map((s) => [s.juntada_id, normStatus(s)]));
+  return (juntadas ?? [])
+    .map((j) => {
+      const n = netBy.get(j.id);
       return {
-        expense: { ...e, amount_cents: num(e.amount_cents) },
-        isPayer,
-        participated: !!share?.is_participant,
-        share_cents: share?.amount_cents ?? 0,
-        outstanding_cents: isPayer ? 0 : (share?.outstanding_cents ?? 0),
-        expenseStatus: statusById.get(e.id)?.settlement_status ?? null,
+        juntada: j,
+        attended: (att ?? []).some((a) => a.juntada_id === j.id),
+        paid_cents: num(n?.paid_cents),
+        consumed_cents: num(n?.consumed_cents),
+        net_cents: num(n?.net_cents),
+        status: stBy.get(j.id) ?? null,
       };
     })
-    .sort((a, b) => b.expense.occurred_on.localeCompare(a.expense.occurred_on));
-}
-
-/** Últimas N juntadas (por fecha de la juntada) con su estado de liquidación. */
-export async function getRecentExpenses(limit = 3) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("expenses")
-    .select("id, title, occurred_on, amount_cents, currency")
-    .eq("status", "active")
-    .order("occurred_on", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  const rows = data ?? [];
-  const { data: st } = rows.length
-    ? await supabase.from("v_expense_status").select("expense_id, settlement_status").in("expense_id", rows.map((r) => r.id))
-    : { data: [] as { expense_id: string; settlement_status: string }[] };
-  const status = new Map((st ?? []).map((s) => [s.expense_id as string, s.settlement_status as ExpenseStatusRow["settlement_status"]]));
-  return rows.map((r) => ({ ...r, amount_cents: num(r.amount_cents), settlement_status: status.get(r.id) ?? "pending" }));
+    .sort((a, b) => b.juntada.occurred_on.localeCompare(a.juntada.occurred_on));
 }

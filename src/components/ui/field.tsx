@@ -19,7 +19,7 @@ export function Field({
         id={inputId}
         aria-invalid={error ? true : undefined}
         className={cn(
-          "h-12 rounded-2xl border border-graphite/10 bg-white/70 px-4 text-base text-graphite",
+          "h-12 w-full min-w-0 rounded-2xl border border-graphite/10 bg-white/70 px-4 text-base text-graphite",
           "placeholder:text-graphite/35 transition outline-none",
           "focus:border-rose focus:bg-white focus:ring-4 focus:ring-rose/15",
           error && "border-rose-dark",

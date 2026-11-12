@@ -4,7 +4,7 @@ export type NavItem = { href: string; label: string; icon: LucideIcon; primary?:
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Inicio", icon: Home },
-  { href: "/gastos", label: "Gastos", icon: ReceiptText },
+  { href: "/gastos", label: "Juntadas", icon: ReceiptText },
   { href: "/gastos/nuevo", label: "Agregar", icon: Plus, primary: true },
   { href: "/rankings", label: "Rankings", icon: Trophy },
   { href: "/perfil", label: "Mi perfil", icon: UserRound },

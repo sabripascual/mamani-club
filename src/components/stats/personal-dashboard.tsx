@@ -19,16 +19,16 @@ export function PersonalDashboard({ dataset, filters, today, memberId }: { datas
   }
 
   // Mi lugar en algunos rankings del período.
-  const ranks = rankings(memberStats(ds), ds.expenses.length);
+  const ranks = rankings(memberStats(ds), ds.juntadas.length);
   const place = (key: string) => {
     const r = ranks.find((x) => x.key === key)!;
     const i = r.rows.findIndex((x) => x.memberId === memberId);
     return i >= 0 && r.rows[i].value > 0 ? `#${i + 1}` : "—";
   };
 
-  const firstMonth = (filters.from ?? ds.expenses.map((e) => e.occurred_on).sort()[0] ?? today).slice(0, 7);
+  const firstMonth = (filters.from ?? ds.juntadas.map((e) => e.occurred_on).sort()[0] ?? today).slice(0, 7);
   const lastMonth = (filters.to ?? today).slice(0, 7);
-  let months = monthlySeries({ ...ds, expenses: [] }, firstMonth, lastMonth).map((m) => ({ ...m, totalCents: me.byMonth.get(m.key) ?? 0 }));
+  let months = monthlySeries({ ...ds, juntadas: [] }, firstMonth, lastMonth).map((m) => ({ ...m, totalCents: me.byMonth.get(m.key) ?? 0 }));
   if (months.length > 24) months = months.slice(-24);
   const catName = new Map(dataset.categories.map((c) => [c.id, c.name]));
 
@@ -37,10 +37,10 @@ export function PersonalDashboard({ dataset, filters, today, memberId }: { datas
       <section aria-label="Mis indicadores">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatTile label="Mi consumo" value={money(me.consumedCents)} hint="mi parte en las juntadas" tone="bg-blush/70" />
-          <StatTile label="Juntadas en las que estuve" value={`${me.participations}`} hint={`${pct(me.participationRate)} de ${me.totalExpenses}`} />
+          <StatTile label="Juntadas a las que fui" value={`${me.participations}`} hint={`${pct(me.participationRate)} de ${me.totalExpenses}`} />
           <StatTile label="Promedio por juntada" value={money(me.avgPerJuntadaCents)} />
           <StatTile label="Promedio mensual" value={money(me.avgPerMonthCents)} hint={`${me.monthsInPeriod} ${me.monthsInPeriod === 1 ? "mes" : "meses"}`} />
-          <StatTile label="Plata que adelanté" value={money(me.advancedCents)} hint={`pagué ${me.timesPaid} ${me.timesPaid === 1 ? "vez" : "veces"}`} tone="bg-powder/60" />
+          <StatTile label="Plata que adelanté" value={money(me.advancedCents)} hint={`pagué ${me.timesPaid} ${me.timesPaid === 1 ? "gasto" : "gastos"}`} tone="bg-powder/60" />
           <StatTile label="Adelanté por otras" value={money(me.advancedForOthersCents)} hint="sin contar mi parte" />
           <StatTile label="Debo" value={money(me.iOweCents)} tone={me.iOweCents ? "bg-rose/20" : undefined} />
           <StatTile label="Me deben" value={money(me.owedToMeCents)} />
@@ -83,7 +83,7 @@ export function PersonalDashboard({ dataset, filters, today, memberId }: { datas
                   <span className="w-5 text-center font-display text-lg text-rose-dark">{i + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{e.title}</span>
-                    <span className="text-xs text-graphite/55">{formatDay(e.occurred_on)} · {catName.get(e.category_id)}</span>
+                    <span className="text-xs text-graphite/55">{formatDay(e.occurred_on)} · {catName.get(e.type_id)}</span>
                   </span>
                   <span className="text-right">
                     <span className="block font-semibold tabular-nums">{money(e.myCents)}</span>

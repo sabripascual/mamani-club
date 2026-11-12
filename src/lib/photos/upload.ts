@@ -51,7 +51,7 @@ export async function uploadPhotos(
     const reg = up2.error
       ? { error: up2.error }
       : await supabase.rpc("add_photo", {
-          p_expense_id: expenseId,
+          p_juntada_id: expenseId,
           p_storage_path: fullPath,
           p_thumb_path: thumbPath,
           p_width: full.width,

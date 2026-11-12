@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatMoney } from "@/lib/money/format";
 import { formatDay, formatMonth } from "@/lib/dates";
 import {
-  byCategory, filterDataset, financialSummary, memberStats, monthlySeries, socialSummary, topExpenses, type Dataset, type Filters,
+  byCategory, byJuntadaType, filterDataset, financialSummary, memberStats, monthlySeries, socialSummary, topJuntadas, type Dataset, type Filters,
 } from "@/lib/stats/compute";
 import type { Member } from "@/lib/expenses/types";
 import { displayName } from "@/lib/utils";
@@ -21,14 +21,14 @@ export function Dashboard({
   dataset, filters, today, memberById,
 }: { dataset: Dataset; filters: Filters; today: string; memberById: Map<string, Member> }) {
   const ds = filterDataset(dataset, filters);
-  if (ds.expenses.length === 0) {
+  if (ds.juntadas.length === 0) {
     return <p className="rounded-2xl bg-white/50 px-4 py-6 text-center text-sm text-graphite/60">No hay juntadas en este período.</p>;
   }
   const fin = financialSummary(ds, { from: filters.from, to: filters.to });
   const stats = memberStats(ds);
   const social = socialSummary(ds, stats);
 
-  const firstMonth = (filters.from ?? ds.expenses.map((e) => e.occurred_on).sort()[0]).slice(0, 7);
+  const firstMonth = (filters.from ?? ds.juntadas.map((e) => e.occurred_on).sort()[0]).slice(0, 7);
   const lastMonth = (filters.to ?? today).slice(0, 7);
   let series = monthlySeries(ds, firstMonth, lastMonth);
   const truncated = series.length > 24;
@@ -39,7 +39,8 @@ export function Dashboard({
   const cats = byCategory(ds);
   const consumers = [...stats].filter((s) => s.consumedCents > 0).sort((a, b) => b.consumedCents - a.consumedCents);
   const advancers = [...stats].filter((s) => s.advancedCents > 0).sort((a, b) => b.advancedCents - a.advancedCents);
-  const top = topExpenses(ds, 5);
+  const top = topJuntadas(ds, 5);
+  const types = byJuntadaType(ds);
   const catName = new Map(dataset.categories.map((c) => [c.id, c.name]));
 
   return (
@@ -47,11 +48,11 @@ export function Dashboard({
       <section aria-label="Indicadores financieros">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatTile label="Total gastado" value={formatMoney(fin.totalCents, "ARS", { round: true })} hint="en pesos" tone="bg-blush/70" />
-          <StatTile label="Juntadas" value={String(fin.count)} />
+          <StatTile label="Juntadas" value={String(fin.count)} hint={`${fin.gastosCount} gastos`} />
           <StatTile label="Promedio por juntada" value={formatMoney(fin.avgPerExpenseCents, "ARS", { round: true })} />
           <StatTile label="Promedio mensual" value={formatMoney(fin.avgPerMonthCents, "ARS", { round: true })} hint={`${fin.monthsInPeriod} ${fin.monthsInPeriod === 1 ? "mes" : "meses"}`} />
-          <StatTile label="Pendiente de devolución" value={formatMoney(fin.pendingCents, "ARS", { round: true })} tone={fin.pendingCents ? "bg-rose/20" : undefined} />
-          <StatTile label="Ya devuelto" value={formatMoney(fin.settledCents, "ARS", { round: true })} />
+          <StatTile label="Pendiente de transferir" value={formatMoney(fin.pendingCents, "ARS", { round: true })} tone={fin.pendingCents ? "bg-rose/20" : undefined} />
+          <StatTile label="Ya transferido" value={formatMoney(fin.settledCents, "ARS", { round: true })} />
         </div>
         <p className="mt-2 text-xs text-graphite/50">
           Adelantado por integrantes para cubrir a las demás: <strong>{formatMoney(fin.advancedForOthersCents, "ARS", { round: true })}</strong>
@@ -96,6 +97,22 @@ export function Dashboard({
         </section>
 
         <section>
+          <h2 className="mb-3 font-display text-xl">Juntadas por tipo</h2>
+          <Card>
+            <BarList
+              color="chart-2"
+              valueLabel="Juntadas"
+              rows={types.map((t) => ({
+                key: t.id, label: t.name, value: t.count, display: `${t.count}`,
+                sub: `${formatMoney(t.totalCents, "ARS", { compact: true })} en total`,
+              }))}
+            />
+          </Card>
+        </section>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <section>
           <h2 className="mb-3 font-display text-xl">Juntadas más costosas</h2>
           <ol className="flex flex-col gap-2">
             {top.map((e, i) => (
@@ -104,9 +121,9 @@ export function Dashboard({
                   <span className="w-5 text-center font-display text-lg text-rose-dark">{i + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{e.title}</span>
-                    <span className="text-xs text-graphite/55">{formatDay(e.occurred_on)} · {catName.get(e.category_id)}</span>
+                    <span className="text-xs text-graphite/55">{formatDay(e.occurred_on)} · {catName.get(e.type_id)}</span>
                   </span>
-                  <span className="font-semibold tabular-nums">{formatMoney(e.base_amount_cents)}</span>
+                  <span className="font-semibold tabular-nums">{formatMoney(e.totalCents, "ARS", { round: true })}</span>
                 </Link>
               </li>
             ))}
@@ -117,7 +134,7 @@ export function Dashboard({
       <div className="grid gap-8 lg:grid-cols-2">
         <section>
           <h2 className="mb-1 font-display text-xl">Consumo por integrante</h2>
-          <p className="mb-3 text-xs text-graphite/55">Su parte en las juntadas en que participó.</p>
+          <p className="mb-3 text-xs text-graphite/55">Su parte en los gastos de los que participó.</p>
           <Card>
             <BarList valueLabel="Consumo" rows={consumers.map((s) => ({
               key: s.memberId, label: memberById.get(s.memberId) ? displayName(memberById.get(s.memberId)!) : "—",
@@ -131,7 +148,7 @@ export function Dashboard({
           <Card>
             <BarList color="chart-2" valueLabel="Adelantado" rows={advancers.map((s) => ({
               key: s.memberId, label: memberById.get(s.memberId) ? displayName(memberById.get(s.memberId)!) : "—",
-              value: s.advancedCents, display: formatMoney(s.advancedCents, "ARS", { compact: true }), sub: `pagó ${s.timesPaid} ${s.timesPaid === 1 ? "vez" : "veces"}`,
+              value: s.advancedCents, display: formatMoney(s.advancedCents, "ARS", { compact: true }), sub: `pagó ${s.timesPaid} ${s.timesPaid === 1 ? "gasto" : "gastos"}`,
             }))} />
           </Card>
         </section>
@@ -144,7 +161,7 @@ export function Dashboard({
           <StatTile label="La menos presente" value={social.leastPresent ? names(social.leastPresent.ids, memberById) : "—"} hint={social.leastPresent ? pct(social.leastPresent.rate) : "Hacen falta más juntadas"} />
           <StatTile label="Participación promedio" value={pct(social.avgParticipationRate)} hint={`${social.avgParticipants.toFixed(1)} por juntada`} />
           <StatTile label="Mes con más juntadas" value={social.busiestMonth ? formatMonth(social.busiestMonth.key) : "—"} hint={social.busiestMonth ? `${social.busiestMonth.count} juntadas${social.busiestMonth.tied ? " (empate)" : ""}` : undefined} />
-          <StatTile label="Categoría más frecuente" value={social.topCategory?.name ?? "—"} hint={social.topCategory ? `${social.topCategory.count} juntadas` : undefined} />
+          <StatTile label="Tipo de juntada más frecuente" value={social.topCategory?.name ?? "—"} hint={social.topCategory ? `${social.topCategory.count} juntadas` : undefined} />
           <Link href="/rankings" className="flex items-center justify-center rounded-[var(--radius-card)] bg-graphite p-4 text-center text-sm font-semibold text-cream transition hover:bg-graphite/90">
             Ver todos los rankings →
           </Link>

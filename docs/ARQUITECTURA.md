@@ -177,6 +177,7 @@ tests/e2e/             Playwright
 | 3 | Dashboard, gráficos, estadísticas sociales, rankings, filtros | ✅ |
 | 4 | Recuerdos: álbum por juntada, fotos comprimidas, carrusel "Así la pasamos", likes, comentarios, moderación | ⏳ |
 | 5 | Notificaciones push de deudas (ver `FASE-5-NOTIFICACIONES.md`) | ✅ |
+| 2.B | Juntadas con varios gastos (segunda etapa, ver `PLAN-SEGUNDA-ETAPA.md`) | ✅ |
 | 6 | Ajustes de UI/UX y logo | ⏳ |
 | 7 | Mamaní Wrapped + calidad final (seguridad, QA mobile/PWA, revisión de los 42 criterios) | ⏳ |
 
@@ -253,6 +254,15 @@ tests/e2e/             Playwright
   - `loading.tsx` con esqueletos en todas las secciones: la navegación responde al
     instante y Next prefetchea esa estructura desde la barra de navegación.
   - Consultas repetidas dentro de una pantalla deduplicadas con `React.cache`.
+
+- **ADR-019** Juntadas con varios gastos (migración 0007, `docs/DISENO-JUNTADAS-MULTIGASTO.md`):
+  la juntada tiene asistentes y gastos; las deudas se saldan con **transferencias netas**
+  por juntada (`settlements`), sugeridas por `juntada_transfers` (greedy determinístico,
+  sin tablas temporales porque las lecturas de la API son de solo lectura). Los gastos
+  migrados conservan su id como id de juntada (links, fotos y notificaciones siguen
+  funcionando). La migración verifica que los saldos queden idénticos. La tabla
+  `payments` queda como historial. Categorías con `kind`: tipos de juntada y categorías
+  de gasto. Rankings temáticos por tipo de juntada (sin ranking deportivo).
 
 ## 10. Riesgos y limitaciones conocidas
 

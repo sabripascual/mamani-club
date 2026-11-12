@@ -34,12 +34,12 @@ export function CategoryItemActions({ id, name, archived }: { id: string; name: 
   );
 }
 
-export function AddCategory({ parentId, label }: { parentId: string | null; label: string }) {
+export function AddCategory({ parentId, label, kind = "gasto" }: { parentId: string | null; label: string; kind?: "gasto" | "juntada" }) {
   const { pending, error, run } = useRun();
   return (
     <span className="flex items-center gap-2">
       <button disabled={pending} className="inline-flex items-center gap-1 text-sm font-semibold text-rose-dark disabled:opacity-50"
-        onClick={() => { const n = window.prompt(label); if (n?.trim()) run(() => addCategory(parentId, n)); }}>
+        onClick={() => { const n = window.prompt(label); if (n?.trim()) run(() => addCategory(parentId, n, kind)); }}>
         <Plus className="size-4" /> {label}
       </button>
       {error && <span className="text-xs text-rose-dark">{error}</span>}

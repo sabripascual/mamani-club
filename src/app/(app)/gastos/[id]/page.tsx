@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Undo2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pencil, Plus, Undo2 } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
-import { getCategories, getExpense, getMembers } from "@/lib/expenses/queries";
+import { getCategories, getJuntada, getJuntadaTypes, getMembers } from "@/lib/expenses/queries";
+import { getAlbum } from "@/lib/photos/queries";
+import { toMiniMembers } from "@/lib/photos/members";
 import { formatMoney } from "@/lib/money/format";
 import { formatDayLong, formatTimestamp, formatDay } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
@@ -11,196 +13,233 @@ import { Alert } from "@/components/ui/alert";
 import { CategoryIcon } from "@/components/expenses/category-icon";
 import { StatusChip } from "@/components/expenses/status-chip";
 import { MemberAvatar, memberName } from "@/components/expenses/member-avatar";
-import { MarkPaidButton, UndoPaymentButton, VoidExpenseButton } from "./actions-client";
-import { getAlbum } from "@/lib/photos/queries";
-import { toMiniMembers } from "@/lib/photos/members";
 import { Gallery } from "@/components/photos/gallery";
 import { PhotoUploader } from "@/components/photos/photo-uploader";
+import { JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
 
 export const metadata: Metadata = { title: "Juntada · MAMANÍ CLUB" };
 
-export default async function ExpenseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function JuntadaPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }) {
   const { id } = await params;
+  const { aviso } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const { profile } = await requireActiveMember();
-  const [data, { byId: catById }, { members, byId: memberById }, album] = await Promise.all([
-    getExpense(id), getCategories(true), getMembers(), getAlbum(id, profile.id, { limit: 6 }),
+  const [data, { byId: typeById }, { byId: catById }, { members, byId: memberById }, album] = await Promise.all([
+    getJuntada(id), getJuntadaTypes(true), getCategories(true), getMembers(), getAlbum(id, profile.id, { limit: 6 }),
   ]);
   if (!data) notFound();
-  const { expense: e, shares, payments, status } = data;
+  const { juntada: j, gastos, shares, attendees, nets, transfers, settlements, status } = data;
 
   const me = profile.id;
   const isAdmin = profile.role === "admin";
-  const canEdit = e.status === "active" && (isAdmin || e.created_by === me);
-  const category = catById.get(e.category_id);
-  const sub = e.subcategory_id ? catById.get(e.subcategory_id) : undefined;
-  const payer = memberById.get(e.paid_by);
-  const activePayments = payments.filter((p) => p.status === "active");
-  const payerShare = shares.find((s) => s.is_payer);
-  const debtorShares = shares.filter((s) => !s.is_payer).sort((a, b) => Number(b.outstanding_cents !== 0) - Number(a.outstanding_cents !== 0));
-  const myShare = shares.find((s) => s.member_id === me && !s.is_payer);
+  const active = j.status === "active";
+  const canEditJuntada = active && (isAdmin || j.created_by === me);
+  const type = typeById.get(j.type_id);
+  const myNet = nets.find((n) => n.member_id === me);
+  const amAttendee = attendees.includes(me);
+  const activeSettlements = settlements.filter((s) => s.status === "active");
+  const sharesBy = (gastoId: string) => shares.filter((s) => s.expense_id === gastoId && s.is_participant);
+  const inSomeGasto = new Set([...shares.filter((s) => s.is_participant).map((s) => s.member_id), ...gastos.map((g) => g.paid_by)]);
 
   return (
     <>
       <Link href="/gastos" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite">
         <ArrowLeft className="size-4" /> Juntadas
       </Link>
-
-      {e.status === "void" && (
-        <div className="mb-4"><Alert>Esta juntada fue anulada{e.void_reason ? `: ${e.void_reason}` : ""}. No cuenta en los saldos.</Alert></div>
-      )}
+      {aviso && <div className="mb-4"><Alert>{aviso}</Alert></div>}
+      {!active && <div className="mb-4"><Alert>Esta juntada fue anulada{j.void_reason ? `: ${j.void_reason}` : ""}. No cuenta en los saldos.</Alert></div>}
 
       <header className="mb-6 flex items-start gap-4">
-        <CategoryIcon icon={category?.icon ?? null} />
+        <CategoryIcon icon={type?.icon ?? null} />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-dark">{sub ? `${category?.name} · ${sub.name}` : category?.name}</p>
-          <h1 className="mt-1 font-display text-[1.9rem] leading-tight font-semibold">{e.title}</h1>
-          <p className="mt-1 text-sm text-graphite/60 first-letter:uppercase">{formatDayLong(e.occurred_on)}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-dark">{type?.name ?? "Juntada"}</p>
+          <h1 className="mt-1 font-display text-[1.9rem] leading-tight font-semibold">{j.title}</h1>
+          <p className="mt-1 text-sm text-graphite/60 first-letter:uppercase">{formatDayLong(j.occurred_on)}</p>
         </div>
+        {canEditJuntada && (
+          <Link href={`/gastos/${j.id}/editar`} aria-label="Editar juntada" className="inline-flex size-10 items-center justify-center rounded-full bg-white/70 ring-1 ring-graphite/10">
+            <Pencil className="size-4" />
+          </Link>
+        )}
       </header>
 
+      {/* Resumen */}
       <Card className="mb-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm text-graphite/60">Total</p>
-            <p className="font-display text-4xl font-semibold tabular-nums">{formatMoney(e.amount_cents, e.currency)}</p>
-            {e.currency !== "ARS" && (
-              <p className="text-xs text-graphite/55">= {formatMoney(e.base_amount_cents)} (cotización {e.fx_rate} del {formatDay(e.fx_rate_date)})</p>
-            )}
+            <p className="text-sm text-graphite/60">Total de la juntada</p>
+            <p className="font-display text-4xl font-semibold tabular-nums">{formatMoney(status?.total_cents ?? 0, j.currency, { round: true })}</p>
+            <p className="text-xs text-graphite/55">{gastos.length} {gastos.length === 1 ? "gasto" : "gastos"} · {attendees.length} fueron</p>
           </div>
           {status && <StatusChip status={status.settlement_status} />}
         </div>
-        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-cream/80 p-3">
-          <MemberAvatar m={payer} size="md" />
-          <div className="text-sm">
-            <p><strong>{e.paid_by === me ? "Vos adelantaste" : `${memberName(payer)} adelantó`}</strong> la plata</p>
-            <p className="text-graphite/60">
-              {payerShare ? `Su consumo: ${formatMoney(payerShare.amount_cents, e.currency)}` : "No participó del consumo"}
-              {status && status.outstanding_cents > 0 && ` · Falta devolver ${formatMoney(status.outstanding_cents, e.currency)}`}
-            </p>
-          </div>
-        </div>
-        {myShare && myShare.outstanding_cents > 0 && (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-rose/20 p-3">
-            <p className="text-sm"><strong>Le debés {formatMoney(myShare.outstanding_cents, e.currency)}</strong> a {memberName(payer)}</p>
-            <MarkPaidButton shareId={myShare.share_id} expenseId={e.id} label="Ya pagué" />
+        {myNet && myNet.net_cents !== 0 && (
+          <div className={`mt-4 rounded-2xl p-3 text-sm ${myNet.net_cents < 0 ? "bg-rose/20" : "bg-lime/70"}`}>
+            {myNet.net_cents < 0 ? <><strong>Debés {formatMoney(-myNet.net_cents, j.currency)}</strong> en esta juntada</> : <><strong>Te deben {formatMoney(myNet.net_cents, j.currency)}</strong> en esta juntada</>}
+            <span className="block text-xs text-graphite/60">Pagaste {formatMoney(myNet.paid_cents, j.currency, { round: true })} · consumiste {formatMoney(myNet.consumed_cents, j.currency, { round: true })}</span>
           </div>
         )}
       </Card>
 
-      <h2 className="mb-3 font-display text-xl">Participantes</h2>
-      <ul className="mb-8 flex flex-col gap-2">
-        {payerShare && (
-          <li className="flex items-center justify-between gap-3 rounded-2xl bg-white/60 p-3">
-            <span className="flex items-center gap-3"><MemberAvatar m={payer} /><span className="font-semibold">{memberName(payer, me)}</span></span>
-            <span className="text-right text-sm">
-              <span className="block font-semibold tabular-nums">{formatMoney(payerShare.amount_cents, e.currency)}</span>
-              <span className="text-xs text-graphite/55">Pagó el total</span>
-            </span>
-          </li>
-        )}
-        {debtorShares.map((s) => {
-          const m = memberById.get(s.member_id);
-          const canMark = e.status === "active" && s.outstanding_cents !== 0 && (isAdmin || me === s.member_id || me === e.paid_by);
-          return (
-            <li key={s.share_id} className="flex items-center justify-between gap-3 rounded-2xl bg-white/60 p-3">
-              <span className="flex min-w-0 items-center gap-3">
-                <MemberAvatar m={m} />
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold">{memberName(m, me)}</span>
-                  {!s.is_participant && <span className="text-xs text-graphite/55">Ya no participa</span>}
-                </span>
-              </span>
-              <span className="flex items-center gap-3">
-                <span className="text-right text-sm">
-                  <span className="block font-semibold tabular-nums">{formatMoney(s.amount_cents, e.currency)}</span>
-                  <span className={s.outstanding_cents > 0 ? "text-xs font-semibold text-rose-dark" : "text-xs text-graphite/55"}>
-                    {s.outstanding_cents > 0
-                      ? s.paid_cents > 0 ? `Falta ${formatMoney(s.outstanding_cents, e.currency)}` : "Pendiente"
-                      : s.outstanding_cents < 0
-                        ? `Reintegrar ${formatMoney(-s.outstanding_cents, e.currency)}`
-                        : "Pagado ✓"}
-                  </span>
-                </span>
-                {canMark && (
-                  <MarkPaidButton
-                    shareId={s.share_id}
-                    expenseId={e.id}
-                    label={s.outstanding_cents < 0 ? "Reintegrado" : "Pagado"}
-                    refund={s.outstanding_cents < 0}
-                    compact
-                  />
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-
-      {payments.length > 0 && (
-        <>
-          <h2 className="mb-3 font-display text-xl">Pagos</h2>
-          <ul className="mb-8 flex flex-col gap-2">
-            {payments.map((p) => {
-              const canUndo = p.status === "active" && e.status === "active" && (isAdmin || [p.from_member, p.to_member, p.created_by].includes(me));
+      {/* Cómo saldamos */}
+      {active && transfers.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-1 font-display text-xl">Cómo saldamos</h2>
+          <p className="mb-3 text-xs text-graphite/55">La menor cantidad de transferencias para quedar todas a mano. Se recalcula si cambia un gasto.</p>
+          <ul className="flex flex-col gap-2">
+            {transfers.map((t) => {
+              const involved = me === t.from_member || me === t.to_member;
+              const canMark = involved || isAdmin;
               return (
-                <li key={p.id} className={`flex items-center justify-between gap-3 rounded-2xl bg-white/50 p-3 text-sm ${p.status === "void" ? "opacity-55" : ""}`}>
-                  <div>
-                    <p className={p.status === "void" ? "line-through" : undefined}>
-                      <strong>{memberName(memberById.get(p.from_member), me)}</strong> {p.kind === "refund" ? "reintegró" : "le pagó"}{" "}
-                      <strong>{formatMoney(p.amount_cents, p.currency)}</strong> a {memberName(memberById.get(p.to_member), me)}
-                    </p>
-                    <p className="text-xs text-graphite/55">
-                      {formatDay(p.paid_on)}
-                      {p.created_by !== p.from_member && ` · registrado por ${memberName(memberById.get(p.created_by), me)}`}
-                      {p.status === "void" && ` · deshecho${p.void_reason ? `: ${p.void_reason}` : ""}`}
-                    </p>
-                  </div>
-                  {canUndo && <UndoPaymentButton paymentId={p.id} expenseId={e.id} />}
+                <li key={`${t.from_member}-${t.to_member}`} className={`flex items-center gap-3 rounded-2xl p-3 ${involved ? "bg-white ring-1 ring-rose/40" : "bg-white/55"}`}>
+                  <MemberAvatar m={memberById.get(t.from_member)} />
+                  <ArrowRight className="size-4 shrink-0 text-graphite/35" />
+                  <MemberAvatar m={memberById.get(t.to_member)} />
+                  <p className="min-w-0 flex-1 text-sm">
+                    <strong>{memberName(memberById.get(t.from_member), me)}</strong> → <strong>{memberName(memberById.get(t.to_member), me)}</strong>
+                    <span className="block font-semibold tabular-nums">{formatMoney(t.amount_cents, j.currency)}</span>
+                  </p>
+                  {canMark && <SettleButton juntadaId={j.id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} />}
                 </li>
               );
             })}
           </ul>
-        </>
-      )}
-
-      {e.status === "active" && (
-        <section className="mb-8">
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="font-display text-xl">Fotos{album.total > 0 && <span className="ml-2 text-base text-graphite/50">{album.total}</span>}</h2>
-            {album.total > 0 && <Link href={`/recuerdos/${e.id}`} className="text-sm font-semibold text-rose-dark">Ver álbum</Link>}
-          </div>
-          {album.total > 0 && (
-            <div className="mb-3">
-              <Gallery photos={album.photos} members={toMiniMembers(members)} meId={me} isAdmin={isAdmin} expenseId={e.id} />
-            </div>
-          )}
-          <PhotoUploader expenseId={e.id} variant={album.total > 0 ? "subtle" : "primary"} />
         </section>
       )}
 
-      {e.description && (
+      {/* Gastos */}
+      <section className="mb-8">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="font-display text-xl">Gastos</h2>
+          {active && (
+            <Link href={`/gastos/${j.id}/gasto/nuevo`} className="inline-flex items-center gap-1 text-sm font-semibold text-rose-dark"><Plus className="size-4" /> Agregar gasto</Link>
+          )}
+        </div>
+        {gastos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-rose/40 p-5 text-center text-sm text-graphite/60">
+            Todavía no hay gastos. {active && <Link href={`/gastos/${j.id}/gasto/nuevo`} className="font-semibold text-rose-dark">Cargá el primero</Link>}
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {gastos.map((g, i) => {
+              const parts = sharesBy(g.id);
+              const cat = catById.get(g.category_id);
+              const sub = g.subcategory_id ? catById.get(g.subcategory_id) : undefined;
+              const canEdit = active && (isAdmin || g.created_by === me);
+              const inner = (
+                <>
+                  <CategoryIcon icon={cat?.icon ?? null} index={i} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{g.title}</span>
+                    <span className="block truncate text-xs text-graphite/55">
+                      {g.paid_by === me ? "pagaste vos" : `pagó ${memberName(memberById.get(g.paid_by))}`} · {sub?.name ?? cat?.name} · entre {parts.length}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block font-semibold tabular-nums">{formatMoney(g.amount_cents, g.currency, { round: true })}</span>
+                    {canEdit && <span className="text-[11px] font-semibold text-rose-dark">Editar</span>}
+                  </span>
+                </>
+              );
+              return (
+                <li key={g.id}>
+                  {canEdit ? (
+                    <Link href={`/gastos/${j.id}/gasto/${g.id}`} className="flex items-center gap-3 rounded-2xl bg-white/60 p-3 transition hover:bg-white">{inner}</Link>
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-2xl bg-white/60 p-3">{inner}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* Asistentes */}
+      <section className="mb-8">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-display text-xl">Fueron <span className="text-base text-graphite/50">{attendees.length}</span></h2>
+          {active && !amAttendee && <JoinButton juntadaId={j.id} />}
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {attendees.map((a) => {
+            const n = nets.find((x) => x.member_id === a);
+            const canRemove = active && !inSomeGasto.has(a) && (a === me || canEditJuntada);
+            return (
+              <li key={a} className="flex items-center gap-2 rounded-full bg-white/60 py-1 pr-2 pl-1">
+                <MemberAvatar m={memberById.get(a)} />
+                <span className="text-sm font-semibold">{memberName(memberById.get(a), me)}</span>
+                {n && n.net_cents !== 0 && (
+                  <span className={`text-xs font-semibold tabular-nums ${n.net_cents < 0 ? "text-rose-dark" : "text-graphite/60"}`}>
+                    {n.net_cents < 0 ? "−" : "+"}{formatMoney(Math.abs(n.net_cents), j.currency, { round: true })}
+                  </span>
+                )}
+                {canRemove && <LeaveButton juntadaId={j.id} memberId={a} self={a === me} />}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* Fotos */}
+      {active && (
+        <section className="mb-8">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="font-display text-xl">Fotos{album.total > 0 && <span className="ml-2 text-base text-graphite/50">{album.total}</span>}</h2>
+            {album.total > 0 && <Link href={`/recuerdos/${j.id}`} className="text-sm font-semibold text-rose-dark">Ver álbum</Link>}
+          </div>
+          {album.total > 0 && (
+            <div className="mb-3"><Gallery photos={album.photos} members={toMiniMembers(members)} meId={me} isAdmin={isAdmin} expenseId={j.id} /></div>
+          )}
+          <PhotoUploader expenseId={j.id} variant={album.total > 0 ? "subtle" : "primary"} />
+        </section>
+      )}
+
+      {/* Transferencias registradas */}
+      {settlements.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 font-display text-xl">Transferencias</h2>
+          <ul className="flex flex-col gap-2">
+            {settlements.map((s) => {
+              const canUndo = s.status === "active" && active && (isAdmin || [s.from_member, s.to_member, s.created_by].includes(me));
+              return (
+                <li key={s.id} className={`flex items-center justify-between gap-3 rounded-2xl bg-white/50 p-3 text-sm ${s.status === "void" ? "opacity-55" : ""}`}>
+                  <div>
+                    <p className={s.status === "void" ? "line-through" : undefined}>
+                      <strong>{memberName(memberById.get(s.from_member), me)}</strong> le transfirió <strong>{formatMoney(s.amount_cents, s.currency)}</strong> a {memberName(memberById.get(s.to_member), me)}
+                    </p>
+                    <p className="text-xs text-graphite/55">
+                      {formatDay(s.paid_on)}{s.alias && ` · alias ${s.alias}`}
+                      {s.created_by !== s.from_member && ` · registró ${memberName(memberById.get(s.created_by), me)}`}
+                      {s.status === "void" && ` · deshecha${s.void_reason ? `: ${s.void_reason}` : ""}`}
+                    </p>
+                  </div>
+                  {canUndo && <UndoSettlementButton settlementId={s.id} juntadaId={j.id} />}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {j.description && (
         <>
           <h2 className="mb-2 font-display text-xl">Descripción</h2>
-          <p className="mb-8 whitespace-pre-line text-graphite/75">{e.description}</p>
+          <p className="mb-8 whitespace-pre-line text-graphite/75">{j.description}</p>
         </>
       )}
 
       <p className="mb-6 text-xs text-graphite/50">
-        Cargada por {memberName(memberById.get(e.created_by), me)} el {formatTimestamp(e.created_at)}
-        {e.updated_at !== e.created_at && ` · última edición ${formatTimestamp(e.updated_at)}`}
+        Creada por {memberName(memberById.get(j.created_by), me)} el {formatTimestamp(j.created_at)}
       </p>
 
-      {canEdit && (
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/gastos/${e.id}/editar`} className="inline-flex h-11 items-center gap-2 rounded-full bg-graphite px-5 text-sm font-semibold text-cream">
-            <Pencil className="size-4" /> Editar
-          </Link>
-          <VoidExpenseButton expenseId={e.id} disabled={activePayments.length > 0} />
-        </div>
-      )}
-      {canEdit && activePayments.length > 0 && (
-        <p className="mt-2 flex items-center gap-1 text-xs text-graphite/50"><Undo2 className="size-3" /> Para anularla primero hay que deshacer los pagos.</p>
+      {canEditJuntada && (
+        <>
+          <VoidJuntadaButton juntadaId={j.id} disabled={activeSettlements.length > 0} />
+          {activeSettlements.length > 0 && (
+            <p className="mt-2 flex items-center gap-1 text-xs text-graphite/50"><Undo2 className="size-3" /> Para anularla primero hay que deshacer las transferencias.</p>
+          )}
+        </>
       )}
     </>
   );

@@ -47,12 +47,13 @@ async function decorate(rows: Row[], me: string, opts: { full: boolean }): Promi
   }));
 }
 
-const COLS = "id, expense_id, uploaded_by, created_at, width, height, storage_path, thumb_path";
+// La columna en la base es juntada_id; se expone como expense_id para no tocar la UI.
+const COLS = "id, expense_id:juntada_id, uploaded_by, created_at, width, height, storage_path, thumb_path";
 
 /** Fotos de una juntada (más recientes primero). */
 export async function getAlbum(expenseId: string, me: string, opts: { full?: boolean; limit?: number } = {}) {
   const supabase = await createClient();
-  let q = supabase.from("photos").select(COLS, { count: "exact" }).eq("expense_id", expenseId).order("created_at", { ascending: false });
+  let q = supabase.from("photos").select(COLS, { count: "exact" }).eq("juntada_id", expenseId).order("created_at", { ascending: false });
   if (opts.limit) q = q.limit(opts.limit);
   const { data, count } = await q.returns<Row[]>();
   return { photos: await decorate(data ?? [], me, { full: opts.full ?? true }), total: count ?? 0 };
@@ -76,8 +77,8 @@ export type AlbumSummary = {
 export async function getAlbums(opts: { limit?: number } = {}): Promise<AlbumSummary[]> {
   const supabase = await createClient();
   const [{ data: photos }, { data: stats }] = await Promise.all([
-    supabase.from("photos").select("id, expense_id, created_at, thumb_path").order("created_at", { ascending: false }).limit(2000),
-    supabase.from("v_photo_stats").select("photo_id, expense_id, likes, comments").limit(2000),
+    supabase.from("photos").select("id, expense_id:juntada_id, created_at, thumb_path").order("created_at", { ascending: false }).limit(2000),
+    supabase.from("v_photo_stats").select("photo_id, expense_id:juntada_id, likes, comments").limit(2000),
   ]);
   const st = new Map((stats ?? []).map((s) => [s.photo_id as string, { likes: Number(s.likes), comments: Number(s.comments) }]));
   const groups = new Map<string, { last: string; count: number; likes: number; comments: number; cover: { path: string; likes: number } }>();
@@ -96,7 +97,7 @@ export async function getAlbums(opts: { limit?: number } = {}): Promise<AlbumSum
   const ordered = [...groups].sort((a, b) => b[1].last.localeCompare(a[1].last)).slice(0, opts.limit ?? 1000);
   if (ordered.length === 0) return [];
   const [{ data: expenses }, urls] = await Promise.all([
-    supabase.from("expenses").select("id, title, occurred_on").in("id", ordered.map(([id]) => id)).eq("status", "active"),
+    supabase.from("juntadas").select("id, title, occurred_on").in("id", ordered.map(([id]) => id)).eq("status", "active"),
     signMany(ordered.map(([, g]) => g.cover.path)),
   ]);
   const byId = new Map((expenses ?? []).map((e) => [e.id as string, e]));
