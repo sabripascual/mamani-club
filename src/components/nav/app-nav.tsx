@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/brand";
-import { ADMIN_ITEM, NAV_ITEMS, isActive } from "./nav-items";
+import { ADMIN_ITEM, MEMORIES_ITEM, NAV_ITEMS, isActive } from "./nav-items";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -55,7 +55,8 @@ export function BottomNav() {
 
 export function SideNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
+  const base = [...NAV_ITEMS.slice(0, 4), MEMORIES_ITEM, ...NAV_ITEMS.slice(4)];
+  const items = isAdmin ? [...base, ADMIN_ITEM] : base;
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-graphite/5 px-5 py-8 lg:flex">
       <Link href="/" className="px-3">

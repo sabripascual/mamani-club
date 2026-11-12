@@ -170,16 +170,15 @@ tests/e2e/             Playwright
 
 ## 8. Plan por fases
 
-Se sigue el plan del prompt maestro, con un ajuste: **la auditoría se construye en la Fase 1
-y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto real.
-
-| Fase | Entregable | Pruebas que la cierran |
+| Fase | Entregable | Estado |
 |---|---|---|
-| 1 | Next + Supabase, auth, registro → pending, aprobación, roles, RLS base, auditoría base, diseño, navegación y PWA instalable | Casos 1–5, 8, 38–42 |
-| 2 | Gastos, categorías, división, multidivisa manual, pagos, balances, simplificación, perfil financiero | Casos 6, 7, 9–18, 22 |
-| 3 | Dashboard, gráficos, rankings, filtros | Casos 19–21 |
-| 4 | Álbum, subida comprimida, carrusel "Así la pasamos", likes, comentarios, moderación | Casos 23–32 |
-| 5 | Wrapped, exportación, hardening de seguridad, QA responsive y PWA | Casos 33–37 + regresión completa |
+| 1 | Next + Supabase, auth, registro → pending, aprobación, roles, RLS, auditoría base, diseño, navegación, PWA | ✅ |
+| 2 | Juntadas, categorías, división, multidivisa preparada, pagos, balances, simplificación, perfil financiero | ✅ |
+| 3 | Dashboard, gráficos, estadísticas sociales, rankings, filtros | ✅ |
+| 4 | Recuerdos: álbum por juntada, fotos comprimidas, carrusel "Así la pasamos", likes, comentarios, moderación | ⏳ |
+| 5 | Notificaciones push de deudas (ver `FASE-5-NOTIFICACIONES.md`) | ⏳ |
+| 6 | Ajustes de UI/UX y logo | ⏳ |
+| 7 | Mamaní Wrapped + calidad final (seguridad, QA mobile/PWA, revisión de los 42 criterios) | ⏳ |
 
 ## 9. Registro de decisiones (ADR)
 
@@ -191,9 +190,8 @@ y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto re
   migrar a R2.
 - **ADR-005** Sin envío de emails: confirmación desactivada, la aprobación del admin es el
   control de acceso y la recuperación de contraseña la hace un admin (contraseña temporal).
-- **ADR-007** Notificaciones (in-app, push y email) **fuera de alcance**. Las secciones 14
-  y "notificaciones" de las fases 4 del prompt maestro quedan descartadas. Si en el futuro
-  se retoman, se agregan como tablas nuevas sin tocar el modelo existente.
+- **ADR-007** ~~Notificaciones fuera de alcance.~~ Reemplazada: se suman **solo push de
+  deudas** en la Fase 5 (`FASE-5-NOTIFICACIONES.md`). Emails siguen fuera de alcance.
 - **ADR-006** Zona horaria `America/Argentina/Buenos_Aires`: `occurred_on` es `date` (sin
   hora); los timestamps son `timestamptz` y se muestran en hora de Buenos Aires.
 

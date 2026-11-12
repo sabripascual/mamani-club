@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Camera, ReceiptText } from "lucide-react";
+import { ReceiptText } from "lucide-react";
+import { getAlbums } from "@/lib/photos/queries";
+import { MemoriesCarousel } from "@/components/photos/memories-carousel";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCategories, getMemberBalances, getMembers } from "@/lib/expenses/queries";
 import { loadDataset, parsePeriod, type PeriodParams } from "@/lib/stats/load";
@@ -18,8 +20,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const { profile } = await requireActiveMember();
   const today = todayAR();
-  const [dataset, balances, { tree }, { members, byId }] = await Promise.all([
-    loadDataset(), getMemberBalances(profile.id), getCategories(), getMembers(),
+  const [dataset, balances, { tree }, { members, byId }, albums] = await Promise.all([
+    loadDataset(), getMemberBalances(profile.id), getCategories(), getMembers(), getAlbums({ limit: 12 }),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
   const { filters } = parsePeriod(sp, today);
@@ -29,6 +31,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <Wordmark className="mb-6 block text-base lg:hidden" />
       <PageHeader eyebrow="Inicio" title={`Hola, ${displayName(profile)}`} />
       <InstallHint />
+
+      {/* Los recuerdos van arriba: la app no es solo una calculadora. */}
+      <div className="mb-8"><MemoriesCarousel albums={albums} /></div>
 
       <div className="mb-8 grid grid-cols-2 gap-3">
         <Link href="/gastos/balances">
@@ -59,11 +64,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </>
       )}
 
-      <div className="mt-10">
-        <EmptyState icon={Camera} title="Así la pasamos">
-          Las fotos de cada juntada van a aparecer en este carrusel (Fase 4).
-        </EmptyState>
-      </div>
     </>
   );
 }
