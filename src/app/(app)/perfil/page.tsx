@@ -10,6 +10,7 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 import { displayName, initials } from "@/lib/utils";
 import { ProfileForm } from "./profile-form";
 import { AvatarPicker } from "./avatar-picker";
+import { PushToggle } from "@/components/pwa/push-toggle";
 import { MemberFinancials, type MovementFilters } from "@/components/expenses/member-financials";
 
 export const metadata: Metadata = { title: "Mi perfil · MAMANÍ CLUB" };
@@ -50,6 +51,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </div>
         </div>
       </Card>
+
+      <h2 className="mt-10 mb-1 font-display text-xl">Recordatorios de deudas</h2>
+      <p className="mb-3 text-sm text-graphite/60">
+        A las 10 de la mañana te avisamos si debés en alguna juntada (todos los días) o si te deben a vos (cada 2 días).
+        Se cortan solos cuando se salda la deuda.
+      </p>
+      <Card><PushToggle vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} /></Card>
 
       <h2 className="mt-10 mb-3 font-display text-xl">Mis números</h2>
       <MemberFinancials memberId={profile.id} filters={filters} basePath="/perfil" />

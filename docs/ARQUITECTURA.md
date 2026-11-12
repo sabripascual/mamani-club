@@ -176,7 +176,7 @@ tests/e2e/             Playwright
 | 2 | Juntadas, categorías, división, multidivisa preparada, pagos, balances, simplificación, perfil financiero | ✅ |
 | 3 | Dashboard, gráficos, estadísticas sociales, rankings, filtros | ✅ |
 | 4 | Recuerdos: álbum por juntada, fotos comprimidas, carrusel "Así la pasamos", likes, comentarios, moderación | ⏳ |
-| 5 | Notificaciones push de deudas (ver `FASE-5-NOTIFICACIONES.md`) | ⏳ |
+| 5 | Notificaciones push de deudas (ver `FASE-5-NOTIFICACIONES.md`) | ✅ |
 | 6 | Ajustes de UI/UX y logo | ⏳ |
 | 7 | Mamaní Wrapped + calidad final (seguridad, QA mobile/PWA, revisión de los 42 criterios) | ⏳ |
 
@@ -227,6 +227,14 @@ tests/e2e/             Playwright
 - **ADR-014** Gráficos en HTML propio (sin librería de charts): barras finas, tooltip con
   hover y teclado, vista de tabla. Colores de datos `#B85662` y `#3F74AB`, validados para
   contraste y daltonismo sobre el fondo crema.
+
+- **ADR-016** Push: Web Push estándar (librería `web-push`, claves VAPID en Vercel).
+  Un único cron diario `/api/cron/diario` a las 13:00 UTC (10:00 AR) que mantiene activo
+  Supabase y manda las notificaciones. El plan se calcula con una función pura
+  (`src/lib/push/plan.ts`, con tests). Cada envío se "reserva" primero en
+  `notification_log` (índice único por día) y se libera si no llegó a ningún dispositivo,
+  así la secuencia no avanza sin que la integrante haya recibido el mensaje y un cron
+  duplicado no repite envíos. Los dispositivos dados de baja (404/410) se borran solos.
 
 ## 10. Riesgos y limitaciones conocidas
 
