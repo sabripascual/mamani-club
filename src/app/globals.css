@@ -2,21 +2,27 @@
 
 /* Identidad MAMANÍ CLUB */
 @theme {
-  --color-blush: #f3dce5;
-  --color-powder: #bfd4e8;
+  /* Marca (logo): rosa #FA53BA y lima #EDFE73.
+     - rosa: acentos, botón "+", decoración, fondos (con texto grafito: 4,1:1).
+     - rosa-dark: TEXTO rosa sobre crema (4,9:1). El rosa de marca no alcanza para texto chico.
+     - lima: fondos de resaltado y selección con texto grafito (11:1).
+     - blush / powder: tintes suaves de rosa y lima para tarjetas. */
+  --color-rose: #fa53ba;
+  --color-rose-dark: #c81a84;
+  --color-lime: #edfe73;
+  --color-blush: #fde3f2;
+  --color-powder: #f4fcc0;
   --color-cream: #f8f5f0;
   --color-graphite: #38333b;
-  --color-rose: #d89a9e;
-  --color-rose-dark: #b9787d;
 
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-manrope), system-ui, sans-serif;
 
   --radius-card: 1.5rem;
 
-  /* Colores de datos: derivados de la paleta y validados (contraste ≥ 3:1 sobre cream,
+  /* Colores de datos: derivados de la marca y validados (contraste ≥ 3:1 sobre cream,
      separación para daltonismo ΔE ≥ 8). Rosa = serie principal; azul = segunda serie. */
-  --color-chart-1: #b85662;
+  --color-chart-1: #c81a84;
   --color-chart-2: #3f74ab;
 }
 

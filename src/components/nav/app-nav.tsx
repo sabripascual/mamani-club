@@ -23,7 +23,7 @@ export function BottomNav() {
                 <Link
                   href={href}
                   aria-label={label}
-                  className="flex size-14 items-center justify-center rounded-full bg-graphite text-cream shadow-lg shadow-graphite/25 transition active:scale-95"
+                  className="flex size-14 items-center justify-center rounded-full bg-rose text-graphite shadow-lg shadow-rose/40 ring-4 ring-lime transition active:scale-95"
                 >
                   <Icon className="size-6" strokeWidth={2} />
                 </Link>
@@ -40,7 +40,7 @@ export function BottomNav() {
                   active ? "text-graphite" : "text-graphite/45",
                 )}
               >
-                <span className={cn("rounded-full px-4 py-1 transition", active && "bg-blush")}>
+                <span className={cn("rounded-full px-4 py-1 transition", active && "bg-lime")}>
                   <Icon className="size-[22px]" strokeWidth={active ? 2 : 1.6} />
                 </span>
                 {label}
@@ -60,9 +60,9 @@ export function SideNav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-graphite/5 px-5 py-8 lg:flex">
       <Link href="/" className="px-3">
-        <Wordmark className="text-xl" />
+        <Wordmark className="w-44" />
       </Link>
-      <p className="mt-1 px-3 text-xs text-graphite/50">La cuenta de nuestras juntadas.</p>
+      <p className="mt-2 px-3 text-xs text-graphite/50">La cuenta de nuestras juntadas.</p>
       <nav aria-label="Navegación principal" className="mt-10">
         <ul className="flex flex-col gap-1">
           {items.map(({ href, label, icon: Icon, primary }) => {
@@ -75,9 +75,9 @@ export function SideNav({ isAdmin }: { isAdmin: boolean }) {
                   className={cn(
                     "flex items-center gap-3 rounded-full px-4 py-3 text-[15px] font-semibold transition",
                     primary
-                      ? "my-2 bg-graphite text-cream hover:bg-graphite/90"
+                      ? "my-2 bg-rose text-graphite hover:brightness-95"
                       : active
-                        ? "bg-blush text-graphite"
+                        ? "bg-lime text-graphite"
                         : "text-graphite/60 hover:bg-graphite/5 hover:text-graphite",
                   )}
                 >

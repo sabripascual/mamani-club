@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "MAMANÍ CLUB",
-    short_name: "Mamaní",
+    name: "Mamaní Club",
+    short_name: "Mamaní Club",
     description: "La cuenta de nuestras juntadas.",
     lang: "es-AR",
     start_url: "/",
