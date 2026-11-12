@@ -13,11 +13,9 @@ export function PageSkeleton({ variant = "list" }: { variant?: "list" | "home" |
         <>
           <Skeleton className="h-16 w-56" />
           <Skeleton className="h-8 w-40" />
-          <div className="-mx-5 flex gap-3 overflow-hidden px-5 lg:mx-0 lg:px-0">
-            <Skeleton className="h-72 w-60 shrink-0 rounded-[1.75rem]" />
-            <Skeleton className="h-72 w-48 shrink-0 rounded-[1.75rem]" />
-          </div>
           <div className="grid grid-cols-2 gap-3"><Skeleton className="h-24" /><Skeleton className="h-24" /></div>
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-48" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
         </>
       ) : (

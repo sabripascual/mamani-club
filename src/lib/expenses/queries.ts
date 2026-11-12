@@ -170,3 +170,21 @@ export async function getMemberMovements(memberId: string) {
     })
     .sort((a, b) => b.expense.occurred_on.localeCompare(a.expense.occurred_on));
 }
+
+/** Últimas N juntadas (por fecha de la juntada) con su estado de liquidación. */
+export async function getRecentExpenses(limit = 3) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("expenses")
+    .select("id, title, occurred_on, amount_cents, currency")
+    .eq("status", "active")
+    .order("occurred_on", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  const rows = data ?? [];
+  const { data: st } = rows.length
+    ? await supabase.from("v_expense_status").select("expense_id, settlement_status").in("expense_id", rows.map((r) => r.id))
+    : { data: [] as { expense_id: string; settlement_status: string }[] };
+  const status = new Map((st ?? []).map((s) => [s.expense_id as string, s.settlement_status as ExpenseStatusRow["settlement_status"]]));
+  return rows.map((r) => ({ ...r, amount_cents: num(r.amount_cents), settlement_status: status.get(r.id) ?? "pending" }));
+}

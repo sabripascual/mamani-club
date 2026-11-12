@@ -3,12 +3,12 @@ import { Camera, Heart, MessageCircle, Images } from "lucide-react";
 import { formatDay } from "@/lib/dates";
 import type { AlbumSummary } from "@/lib/photos/queries";
 
-/** "Así la pasamos": álbumes reales, más recientes primero, con scroll horizontal. */
+/** "Manija Memories": álbumes reales, más recientes primero, con scroll horizontal. */
 export function MemoriesCarousel({ albums }: { albums: AlbumSummary[] }) {
   return (
-    <section aria-label="Así la pasamos">
+    <section aria-label="Manija Memories">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="font-display text-2xl">Así la pasamos</h2>
+        <h2 className="font-display text-2xl">Manija Memories</h2>
         {albums.length > 0 && <Link href="/recuerdos" className="text-sm font-semibold text-rose-dark">Ver todos</Link>}
       </div>
       {albums.length === 0 ? (

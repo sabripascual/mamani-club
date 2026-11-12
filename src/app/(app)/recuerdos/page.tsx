@@ -7,7 +7,7 @@ import { formatDay, formatMonth } from "@/lib/dates";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 
-export const metadata: Metadata = { title: "Recuerdos · MAMANÍ CLUB" };
+export const metadata: Metadata = { title: "Manija Memories · MAMANÍ CLUB" };
 
 export default async function MemoriesPage() {
   await requireActiveMember();
@@ -20,7 +20,7 @@ export default async function MemoriesPage() {
   }
   return (
     <>
-      <PageHeader eyebrow="Recuerdos" title="Así la pasamos" />
+      <PageHeader eyebrow="Recuerdos" title="Manija Memories" />
       {albums.length === 0 ? (
         <EmptyState icon={Camera} title="Todavía no hay fotos">Entrá a una juntada y subí las primeras.</EmptyState>
       ) : (

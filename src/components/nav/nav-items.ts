@@ -13,7 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
 export const ADMIN_ITEM: NavItem = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 /** Solo en la barra lateral de desktop (en mobile se llega desde Inicio y cada juntada). */
-export const MEMORIES_ITEM: NavItem = { href: "/recuerdos", label: "Recuerdos", icon: Images };
+export const MEMORIES_ITEM: NavItem = { href: "/recuerdos", label: "Manija Memories", icon: Images };
 
 export function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
