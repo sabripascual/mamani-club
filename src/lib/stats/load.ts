@@ -22,7 +22,7 @@ export const loadDataset = cache(async (): Promise<Dataset> => {
   const [juntadas, gastos, shares, attendees, nets, settlements, { data: categories }, { data: members }] = await Promise.all([
     fetchAll<StatJuntada>(() => supabase.from("juntadas").select("id, title, occurred_on, type_id, created_by").eq("status", "active").order("occurred_on") as unknown as Q),
     fetchAll<StatGasto>(() => supabase.from("expenses").select("id, juntada_id, category_id, base_amount_cents, fx_rate, paid_by, created_by").eq("status", "active").order("id") as unknown as Q),
-    fetchAll<StatShare>(() => supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant").order("id") as unknown as Q),
+    fetchAll<StatShare>(() => supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant, guest_name").order("id") as unknown as Q),
     fetchAll<StatAttendee>(() => supabase.from("juntada_attendees").select("juntada_id, member_id").order("juntada_id") as unknown as Q),
     fetchAll<StatNet>(() => supabase.from("v_juntada_member_balances").select("juntada_id, member_id, net_cents").neq("net_cents", 0).order("juntada_id") as unknown as Q),
     fetchAll<StatSettlement>(() => supabase.from("settlements").select("juntada_id, amount_cents").eq("status", "active").order("id") as unknown as Q),

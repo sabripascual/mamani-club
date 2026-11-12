@@ -275,6 +275,17 @@ tests/e2e/             Playwright
   - Mensajes editables por admins (`notification_messages`), con `{nombre}` como variable;
     envíos manuales registrados en `notification_log` (kind `broadcast`).
 
+- **ADR-021** Invitadas en los gastos (migración 0010): una invitada es una parte más del
+  gasto (`expense_shares.guest_name`), a nombre de su **responsable** (`member_id`). Así los
+  saldos, las transferencias sugeridas y las deudas no cambian de modelo: la responsable
+  debe su parte y la de su invitada. Una integrante puede tener varias partes en un gasto
+  (índice único por integrante + nombre de invitada). La invitada no suma presencia
+  (no se agrega a asistentes) ni consumo de la responsable en las estadísticas; sí
+  cuenta en el total gastado. Pueden editar el gasto quien lo cargó, una admin o la
+  responsable de una invitada (anularlo, solo las dos primeras). Push: al cargar el gasto
+  se avisa a la responsable, y el recordatorio de deuda aclara "Incluye la parte de tu
+  invitada X".
+
 ## 10. Riesgos y limitaciones conocidas
 
 - Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de

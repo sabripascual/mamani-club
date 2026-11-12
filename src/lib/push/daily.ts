@@ -19,10 +19,23 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
   if (!transfers || transfers.length === 0) return { planned: 0, sent: 0 };
 
   const ids = [...new Set(transfers.map((t) => t.juntada_id as string))];
-  const [{ data: juntadas }, { data: members }] = await Promise.all([
+  const [{ data: juntadas }, { data: members }, { data: guestShares }] = await Promise.all([
     admin.from("juntadas").select("id, title, created_at").in("id", ids),
     admin.from("profiles").select("id").eq("status", "active"),
+    // Partes de invitadas en esas juntadas: se menciona en el aviso a su responsable.
+    admin.from("expense_shares").select("member_id, guest_name, expenses!inner(juntada_id, status)")
+      .not("guest_name", "is", null).in("expenses.juntada_id", ids).eq("expenses.status", "active"),
   ]);
+  const guestsOf = new Map<string, Set<string>>(); // "juntada:integrante" → nombres de sus invitadas
+  for (const s of (guestShares ?? []) as unknown as { member_id: string; guest_name: string; expenses: { juntada_id: string } }[]) {
+    const k = `${s.expenses.juntada_id}:${s.member_id}`;
+    guestsOf.set(k, (guestsOf.get(k) ?? new Set()).add(s.guest_name));
+  }
+  const guestNote = (juntadaId: string, memberId: string) => {
+    const names = [...(guestsOf.get(`${juntadaId}:${memberId}`) ?? [])];
+    if (names.length === 0) return "";
+    return names.length === 1 ? `\nIncluye la parte de tu invitada ${names[0]}` : `\nIncluye la parte de tus invitadas ${names.join(", ")}`;
+  };
   const jById = new Map((juntadas ?? []).map((j) => [j.id as string, j]));
   const active = new Set((members ?? []).map((m) => m.id as string));
 
@@ -53,7 +66,8 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
   // Deudoras: una por juntada (montos sumados). Quien cobra: resumen con todas las transferencias.
   const plan = [
     ...planNotifications(today, debtorDebts, logEntries, (m) => active.has(m) && (subsByMember.get(m)?.length ?? 0) > 0, (c, cur) => formatMoney(c, cur, { round: true }))
-      .filter((p) => p.kind === "debtor"),
+      .filter((p) => p.kind === "debtor")
+      .map((p) => ({ ...p, body: p.body + guestNote(p.expense_id ?? "", p.member_id) })),
     ...planNotifications(today, debts, logEntries, (m) => active.has(m) && (subsByMember.get(m)?.length ?? 0) > 0, (c, cur) => formatMoney(c, cur, { round: true }))
       .filter((p) => p.kind === "creditor"),
   ];

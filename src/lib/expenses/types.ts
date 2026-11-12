@@ -80,7 +80,8 @@ export type Gasto = {
   fx_rate_date: string;
 };
 
-export type Share = { expense_id: string; member_id: string; amount_cents: number; is_participant: boolean };
+/** Parte de un gasto. Si `guest_name` tiene valor, es la parte de una invitada y `member_id` es su responsable. */
+export type Share = { expense_id: string; member_id: string; amount_cents: number; is_participant: boolean; guest_name: string | null };
 
 export type MemberNet = {
   juntada_id: string;

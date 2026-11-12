@@ -177,3 +177,22 @@ describe("personalSummary (vista Yo)", () => {
     expect(p.topJuntadas).toEqual([]);
   });
 });
+
+describe("invitadas", () => {
+  // Ana paga $90.000 entre Ana, Bea y "Lu" (invitada de Bea).
+  const withGuest = build({ id: "j", date: "2026-05-01", type: "t-casa", attendees: ["ana", "bea"],
+    gastos: [{ id: "g", cat: "c-comida", amount: 9000000, paidBy: "ana", parts: ["ana", "bea"] }] });
+  withGuest.shares = [
+    { expense_id: "g", member_id: "ana", amount_cents: 3000000, is_participant: true, guest_name: null },
+    { expense_id: "g", member_id: "bea", amount_cents: 3000000, is_participant: true, guest_name: null },
+    { expense_id: "g", member_id: "bea", amount_cents: 3000000, is_participant: true, guest_name: "Lu" },
+  ];
+  it("la parte de la invitada no es consumo de la responsable", () => {
+    expect(memberStats(withGuest).find((s) => s.memberId === "bea")!.consumedCents).toBe(3000000);
+    expect(personalSummary(withGuest, "bea").consumedCents).toBe(3000000);
+  });
+  it("pero sí suma al total gastado y no agrega presencias", () => {
+    expect(financialSummary(withGuest).totalCents).toBe(9000000);
+    expect(memberStats(withGuest).find((s) => s.memberId === "bea")!.participations).toBe(1);
+  });
+});

@@ -107,7 +107,7 @@ export async function getJuntada(id: string) {
   ]);
   const gastoIds = (gastos ?? []).map((g) => g.id);
   const { data: shares } = gastoIds.length
-    ? await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant").in("expense_id", gastoIds).returns<Share[]>()
+    ? await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant, guest_name").in("expense_id", gastoIds).returns<Share[]>()
     : { data: [] as Share[] };
   return {
     juntada,
@@ -127,7 +127,7 @@ export async function getGasto(id: string) {
   const supabase = await createClient();
   const { data: gasto } = await supabase.from("expenses").select(GASTO_COLUMNS).eq("id", id).maybeSingle<Gasto>();
   if (!gasto) return null;
-  const { data: shares } = await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant").eq("expense_id", id).returns<Share[]>();
+  const { data: shares } = await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant, guest_name").eq("expense_id", id).returns<Share[]>();
   return { gasto: { ...gasto, amount_cents: num(gasto.amount_cents) }, shares: (shares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })) };
 }
 

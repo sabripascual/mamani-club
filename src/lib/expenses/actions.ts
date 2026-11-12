@@ -45,29 +45,53 @@ const gastoSchema = z.object({
   }),
   paid_by: uuid,
   split_type: z.enum(["equal", "custom"]),
-  participants: z.array(uuid).min(1, "Elegí quiénes participaron de este gasto"),
+  participants: z.array(uuid),
   reason: z.string().trim().max(200).optional().transform((v) => v || null),
 });
+
+/** Invitadas del formulario: nombre + responsable (+ su parte si la división es personalizada). */
+export type GuestInput = { name: string; responsible_id: string; share: string };
+
+function readGuests(formData: FormData, prefix: string): { guests: GuestInput[]; error?: string } {
+  const names = formData.getAll(prefix + "guest_name").map((v) => String(v).trim());
+  const resp = formData.getAll(prefix + "guest_responsible").map(String);
+  const guests = names.map((name, i) => ({ name, responsible_id: resp[i] ?? "", share: String(formData.get(`${prefix}gshare_${i}`) ?? "") }));
+  if (guests.some((g) => g.name.length === 0 || g.name.length > 40)) return { guests, error: "Poné el nombre de cada invitada (hasta 40 letras)" };
+  if (guests.some((g) => !uuid.safeParse(g.responsible_id).success)) return { guests, error: "Elegí quién se hace cargo de cada invitada" };
+  const keys = guests.map((g) => `${g.responsible_id}|${g.name.toLowerCase()}`);
+  if (new Set(keys).size !== keys.length) return { guests, error: "Hay una invitada repetida" };
+  return { guests };
+}
 
 function readGasto(formData: FormData, prefix = "") {
   const g = (k: string) => formData.get(prefix + k);
   const participants = formData.getAll(prefix + "participants").map(String);
   const custom: Record<string, string> = {};
   for (const id of participants) custom[id] = String(g(`share_${id}`) ?? "");
-  const parsed = gastoSchema.safeParse({
+  const guests = readGuests(formData, prefix);
+  const parsed = gastoSchema.superRefine((d, ctx) => {
+    if (d.participants.length === 0 && guests.guests.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["participants"], message: "Elegí quiénes participaron de este gasto" });
+    }
+    if (guests.error) ctx.addIssue({ code: "custom", path: ["guests"], message: guests.error });
+  }).safeParse({
     title: g("title") ?? "", category_id: g("category_id") ?? "", subcategory_id: g("subcategory_id") ?? "",
     description: g("description") ?? "", amount: g("amount") ?? "", paid_by: g("paid_by") ?? "",
     split_type: g("split_type") ?? "equal", participants, reason: g("reason") ?? "",
   });
-  return { parsed, custom };
+  return { parsed, custom, guests: guests.guests };
 }
 
-function rpcGastoArgs(d: z.infer<typeof gastoSchema>, custom: Record<string, string>) {
-  let customShares: { member_id: string; amount_cents: number }[] | null = null;
+function rpcGastoArgs(d: z.infer<typeof gastoSchema>, custom: Record<string, string>, guests: GuestInput[]) {
+  const money = (v?: string) => (v?.trim() === "0" ? 0 : parseMoney(v ?? ""));
+  let customShares: { member_id: string; amount_cents: number; guest_name?: string }[] | null = null;
   if (d.split_type === "custom") {
-    const shares = d.participants.map((id) => ({ member_id: id, amount_cents: custom[id]?.trim() === "0" ? 0 : parseMoney(custom[id] ?? "") }));
+    const shares = [
+      ...d.participants.map((id) => ({ member_id: id, amount_cents: money(custom[id]) })),
+      ...guests.map((g) => ({ member_id: g.responsible_id, amount_cents: money(g.share), guest_name: g.name })),
+    ];
     if (shares.some((s) => s.amount_cents === null)) return { error: "Completá un importe válido para cada participante" };
-    customShares = shares as { member_id: string; amount_cents: number }[];
+    customShares = shares as { member_id: string; amount_cents: number; guest_name?: string }[];
     if (customShares.reduce((a, s) => a + s.amount_cents, 0) !== d.amount) return { error: "Las partes tienen que sumar exactamente el total" };
   }
   return {
@@ -75,36 +99,44 @@ function rpcGastoArgs(d: z.infer<typeof gastoSchema>, custom: Record<string, str
       p_title: d.title, p_category_id: d.category_id, p_amount_cents: d.amount, p_paid_by: d.paid_by,
       p_participants: d.split_type === "equal" ? d.participants : null, p_split_type: d.split_type, p_custom_shares: customShares,
       p_subcategory_id: d.subcategory_id, p_description: d.description, p_currency: "ARS",
+      p_guests: d.split_type === "equal" && guests.length ? guests.map((g) => ({ name: g.name, responsible_id: g.responsible_id })) : null,
     },
   };
 }
 
 export async function createGasto(juntadaId: string, _: FormState, formData: FormData): Promise<FormState> {
-  const { parsed, custom } = readGasto(formData);
+  const { parsed, custom, guests } = readGasto(formData);
   if (!parsed.success) return { fields: fieldErrors(parsed.error) };
-  const r = rpcGastoArgs(parsed.data, custom);
+  const r = rpcGastoArgs(parsed.data, custom, guests);
   if (r.error) return { fields: { shares: r.error } };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: gastoId, error } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
   if (error) return gastoDbError(error.message);
-  if (user) after(() => notifyGastoLoaded(gastoId as string, juntadaId, parsed.data.participants, user.id).catch(() => {}));
+  if (user) {
+    after(() => notifyGastoLoaded(gastoId as string, juntadaId, [...parsed.data.participants, ...guests.map((g) => g.responsible_id)], user.id).catch(() => {}));
+  }
   refresh(juntadaId);
   redirect(`/gastos/${juntadaId}`);
 }
 
 export async function updateGasto(gastoId: string, juntadaId: string, _: FormState, formData: FormData): Promise<FormState> {
-  const { parsed, custom } = readGasto(formData);
+  const { parsed, custom, guests } = readGasto(formData);
   if (!parsed.success) return { fields: fieldErrors(parsed.error) };
-  const r = rpcGastoArgs(parsed.data, custom);
+  const r = rpcGastoArgs(parsed.data, custom, guests);
   if (r.error) return { fields: { shares: r.error } };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: prev } = await supabase.from("expense_shares").select("member_id").eq("expense_id", gastoId);
-  const before = new Set((prev ?? []).map((p) => p.member_id as string));
+  const { data: prev } = await supabase.from("expense_shares").select("member_id, guest_name").eq("expense_id", gastoId);
+  // Clave por parte: integrante sola o integrante + invitada. Se avisa solo por las partes nuevas.
+  const key = (m: string, guest?: string | null) => `${m}|${(guest ?? "").toLowerCase()}`;
+  const before = new Set((prev ?? []).map((p) => key(p.member_id as string, p.guest_name as string | null)));
   const { error } = await supabase.rpc("update_expense", { p_expense_id: gastoId, ...r.args, p_reason: parsed.data.reason });
   if (error) return gastoDbError(error.message);
-  const added = parsed.data.participants.filter((m) => !before.has(m));
+  const added = [
+    ...parsed.data.participants.filter((m) => !before.has(key(m))),
+    ...guests.filter((g) => !before.has(key(g.responsible_id, g.name))).map((g) => g.responsible_id),
+  ];
   if (user && added.length) after(() => notifyGastoLoaded(gastoId, juntadaId, added, user.id).catch(() => {}));
   refresh(juntadaId);
   redirect(`/gastos/${juntadaId}`);
@@ -162,12 +194,12 @@ export async function createJuntada(_: FormState, formData: FormData): Promise<F
   const juntadaId = id as string;
 
   if (gasto?.parsed.success) {
-    const r = rpcGastoArgs(gasto.parsed.data, gasto.custom);
+    const r = rpcGastoArgs(gasto.parsed.data, gasto.custom, gasto.guests);
     if (r.error) return { fields: { g_shares: r.error } };
     const { data: gastoId, error: gErr } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
     // La juntada ya existe: si el gasto falla, se puede agregar desde la juntada.
     if (gErr) redirect(`/gastos/${juntadaId}?aviso=${encodeURIComponent("La juntada se creó, pero el gasto no: " + gErr.message)}`);
-    const parts = gasto.parsed.data.participants;
+    const parts = [...gasto.parsed.data.participants, ...gasto.guests.map((g) => g.responsible_id)];
     if (user) after(() => notifyGastoLoaded(gastoId as string, juntadaId, parts, user.id).catch(() => {}));
   }
   refresh(juntadaId);
