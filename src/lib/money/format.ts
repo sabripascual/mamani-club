@@ -1,13 +1,18 @@
-/** Formatea centavos como moneda argentina: 12000050 → "$ 120.000,50". */
-export function formatMoney(cents: number | bigint, currency = "ARS", opts: { compact?: boolean } = {}) {
+/**
+ * Formatea centavos como moneda argentina: 12000050 → "$ 120.000,50".
+ * - round: sin centavos (para promedios e indicadores).
+ * - compact: abrevia millones con un decimal ("$ 1,4 M") para etiquetas de gráficos.
+ */
+export function formatMoney(cents: number | bigint, currency = "ARS", opts: { compact?: boolean; round?: boolean } = {}) {
   const value = Number(cents) / 100;
-  const hasCents = Number(cents) % 100 !== 0;
+  const big = opts.compact && Math.abs(value) >= 1_000_000;
+  const showCents = !opts.compact && !opts.round && Number(cents) % 100 !== 0;
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,
-    minimumFractionDigits: hasCents && !opts.compact ? 2 : 0,
-    maximumFractionDigits: opts.compact ? 0 : 2,
-    notation: opts.compact && Math.abs(value) >= 1_000_000 ? "compact" : "standard",
+    notation: big ? "compact" : "standard",
+    minimumFractionDigits: showCents ? 2 : 0,
+    maximumFractionDigits: big ? 1 : showCents ? 2 : 0,
   }).format(value);
 }
 

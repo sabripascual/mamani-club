@@ -219,6 +219,17 @@ y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto re
   offline de datos (las cuentas siempre vienen del servidor), así que alcanza con cachear
   estáticos y mostrar una página "sin conexión". Menos dependencias y comportamiento obvio.
 
+- **ADR-013** Estadísticas y rankings se calculan **en el servidor de Next** con funciones
+  puras (`src/lib/stats/compute.ts`, con tests) sobre las juntadas activas y sus partes,
+  que se leen con RLS (solo integrantes activas). Para el volumen de un grupo de amigas
+  (cientos o pocos miles de juntadas) es más simple y testeable que SQL agregado, y la
+  misma lógica sirve para el Wrapped. Reglas: una participación por juntada; montos
+  agregados en ARS con la cotización guardada; adelantado ≠ consumo; sin ganadoras
+  cuando no hay datos que lo justifiquen. Si el volumen creciera, se mueven a vistas SQL.
+- **ADR-014** Gráficos en HTML propio (sin librería de charts): barras finas, tooltip con
+  hover y teclado, vista de tabla. Colores de datos `#B85662` y `#3F74AB`, validados para
+  contraste y daltonismo sobre el fondo crema.
+
 ## 10. Riesgos y limitaciones conocidas
 
 - Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de
