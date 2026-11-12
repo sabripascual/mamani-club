@@ -50,6 +50,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </Link>
       </header>
       <PendingRequestsBanner count={pendingRequests} />
+      {!profile.birth_date && (
+        <Link href="/perfil/editar" className="mb-6 flex items-center gap-3 rounded-[var(--radius-card)] bg-blush p-4 text-sm transition hover:brightness-95">
+          <span className="text-2xl">🎂</span>
+          <span className="flex-1"><strong>¿Cuándo es tu cumple?</strong><span className="block text-graphite/65">Cargalo en tu perfil para que el club te salude.</span></span>
+        </Link>
+      )}
       <InstallHint />
 
       <div className="mb-8 grid grid-cols-2 gap-3">

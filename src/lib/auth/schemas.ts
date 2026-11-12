@@ -13,6 +13,10 @@ export const signUpSchema = z.object({
     .regex(USERNAME_RE, "Entre 3 y 20 caracteres: letras minúsculas, números, punto o guion bajo"),
   email: z.string().trim().toLowerCase().email("Ese email no parece válido"),
   password: z.string().min(8, "Mínimo 8 caracteres").max(72),
+  birth_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Contanos cuándo es tu cumple")
+    .refine((v) => v >= "1900-01-01" && v <= new Date().toISOString().slice(0, 10), "Revisá la fecha"),
 });
 
 export const signInSchema = z.object({

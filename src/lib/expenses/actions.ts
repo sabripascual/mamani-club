@@ -6,12 +6,18 @@ import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseMoney } from "@/lib/money/format";
-import { notifyAddedToJuntada } from "@/lib/push/expense-alerts";
+import { notifyGastoLoaded, notifyPaid } from "@/lib/push/expense-alerts";
 
 export type FormState = { error?: string; fields?: Partial<Record<string, string>> };
 export type ActionResult = { ok: boolean; error?: string };
 
 const uuid = z.string().uuid();
+
+/** Los errores de la base sobre la subcategoría van al campo, no arriba. */
+function gastoDbError(message: string, prefix = ""): FormState {
+  if (message.includes("subcategoría")) return { fields: { [`${prefix}subcategory_id`]: message } };
+  return { error: message };
+}
 
 function fieldErrors(error: z.ZodError) {
   const out: Record<string, string> = {};
@@ -28,7 +34,7 @@ const refresh = (juntadaId?: string | null) => {
 // Gasto (dentro de una juntada)
 // ---------------------------------------------------------------------------
 const gastoSchema = z.object({
-  title: z.string().trim().min(1, "Contá qué se compró").max(80),
+  title: z.string().trim().min(1, "Elegí qué se compró").max(80),
   category_id: uuid.or(z.literal("")).refine((v) => v !== "", "Elegí una categoría"),
   subcategory_id: z.string().optional().transform((v) => v || null),
   description: z.string().trim().max(500).optional().transform((v) => v || null),
@@ -80,9 +86,9 @@ export async function createGasto(juntadaId: string, _: FormState, formData: For
   if (r.error) return { fields: { shares: r.error } };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
-  if (error) return { error: error.message };
-  if (user) after(() => notifyAddedToJuntada(juntadaId, parsed.data.participants, user.id).catch(() => {}));
+  const { data: gastoId, error } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
+  if (error) return gastoDbError(error.message);
+  if (user) after(() => notifyGastoLoaded(gastoId as string, juntadaId, parsed.data.participants, user.id).catch(() => {}));
   refresh(juntadaId);
   redirect(`/gastos/${juntadaId}`);
 }
@@ -97,9 +103,9 @@ export async function updateGasto(gastoId: string, juntadaId: string, _: FormSta
   const { data: prev } = await supabase.from("expense_shares").select("member_id").eq("expense_id", gastoId);
   const before = new Set((prev ?? []).map((p) => p.member_id as string));
   const { error } = await supabase.rpc("update_expense", { p_expense_id: gastoId, ...r.args, p_reason: parsed.data.reason });
-  if (error) return { error: error.message };
+  if (error) return gastoDbError(error.message);
   const added = parsed.data.participants.filter((m) => !before.has(m));
-  if (user && added.length) after(() => notifyAddedToJuntada(juntadaId, added, user.id).catch(() => {}));
+  if (user && added.length) after(() => notifyGastoLoaded(gastoId, juntadaId, added, user.id).catch(() => {}));
   refresh(juntadaId);
   redirect(`/gastos/${juntadaId}`);
 }
@@ -156,11 +162,11 @@ export async function createJuntada(_: FormState, formData: FormData): Promise<F
   if (gasto?.parsed.success) {
     const r = rpcGastoArgs(gasto.parsed.data, gasto.custom);
     if (r.error) return { fields: { g_shares: r.error } };
-    const { error: gErr } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
+    const { data: gastoId, error: gErr } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
     // La juntada ya existe: si el gasto falla, se puede agregar desde la juntada.
     if (gErr) redirect(`/gastos/${juntadaId}?aviso=${encodeURIComponent("La juntada se creó, pero el gasto no: " + gErr.message)}`);
     const parts = gasto.parsed.data.participants;
-    if (user) after(() => notifyAddedToJuntada(juntadaId, parts, user.id).catch(() => {}));
+    if (user) after(() => notifyGastoLoaded(gastoId as string, juntadaId, parts, user.id).catch(() => {}));
   }
   refresh(juntadaId);
   redirect(`/gastos/${juntadaId}`);
@@ -208,10 +214,12 @@ export async function leaveJuntada(juntadaId: string, memberId: string): Promise
 // ---------------------------------------------------------------------------
 export async function settleTransfer(juntadaId: string, from: string, to: string, amountCents: number, alias?: string): Promise<ActionResult> {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.rpc("settle_transfer", {
     p_juntada_id: juntadaId, p_from: from, p_to: to, p_amount_cents: amountCents, p_alias: alias ?? null,
   });
   if (error) return { ok: false, error: error.message };
+  if (user) after(() => notifyPaid(juntadaId, from, to, amountCents, user.id).catch(() => {}));
   refresh(juntadaId);
   return { ok: true };
 }

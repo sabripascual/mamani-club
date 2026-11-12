@@ -17,7 +17,7 @@ function values(formData: FormData, keys: string[]) {
 }
 
 export async function signUp(_: FormState, formData: FormData): Promise<FormState> {
-  const raw = values(formData, ["first_name", "last_name", "nickname", "username", "email", "password"]);
+  const raw = values(formData, ["first_name", "last_name", "nickname", "username", "email", "password", "birth_date"]);
   const keep = { ...raw, password: "" };
   const parsed = signUpSchema.safeParse(raw);
   if (!parsed.success) return { fields: flattenErrors(parsed.error), values: keep };

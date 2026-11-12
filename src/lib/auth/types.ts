@@ -13,7 +13,8 @@ export type Profile = {
   joined_at: string | null;
   created_at: string;
   must_change_password: boolean;
+  birth_date: string | null;
 };
 
 export const PROFILE_COLUMNS =
-  "id, first_name, last_name, username, nickname, avatar_path, role, status, joined_at, created_at, must_change_password";
+  "id, first_name, last_name, username, nickname, avatar_path, role, status, joined_at, created_at, must_change_password, birth_date";
