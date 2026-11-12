@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/ingresar", "/registro", "/zz"];
+const PUBLIC_PATHS = ["/ingresar", "/registro"];
 
 /**
  * Refresca la sesión de Supabase en cada request y manda a /ingresar a quien no
