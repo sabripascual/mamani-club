@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
+import { requireActiveMember } from "@/lib/auth/session";
+import { getCategories, getMembers } from "@/lib/expenses/queries";
+import { createExpense } from "@/lib/expenses/actions";
+import { todayAR } from "@/lib/dates";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ExpenseForm } from "@/components/expenses/expense-form";
 
 export const metadata: Metadata = { title: "Nueva juntada · MAMANÍ CLUB" };
 
-export default function NewExpensePage() {
+export default async function NewExpensePage() {
+  const { profile } = await requireActiveMember();
+  const [{ tree }, { members }] = await Promise.all([getCategories(), getMembers()]);
   return (
     <>
-      <PageHeader eyebrow="Agregar" title="Nueva juntada" />
-      <EmptyState icon={Sparkles} title="Muy pronto">
-        Acá vas a poder cargar una juntada, elegir quiénes participaron y dividir el gasto.
-      </EmptyState>
+      <PageHeader eyebrow="Agregar" title="Nueva juntada">
+        Cada juntada es un gasto: cargá cuánto salió, quién pagó y quiénes participaron.
+      </PageHeader>
+      <ExpenseForm mode="create" action={createExpense} categories={tree} members={members} meId={profile.id} today={todayAR()} />
     </>
   );
 }

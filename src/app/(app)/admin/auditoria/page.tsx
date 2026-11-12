@@ -3,6 +3,7 @@ import { ScrollText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { formatMoney } from "@/lib/money/format";
 
 export const metadata: Metadata = { title: "Auditoría · MAMANÍ CLUB" };
 
@@ -17,9 +18,17 @@ const ACTION_LABELS: Record<string, string> = {
   member_status_changed: "Cambió el estado",
   role_changed: "Cambió el rol",
   temporary_password_set: "Generó contraseña temporal",
+  expense_created: "Cargó la juntada",
+  expense_updated: "Editó la juntada",
+  expense_voided: "Anuló la juntada",
+  payment_created: "Registró un pago",
+  refund_created: "Registró un reintegro",
+  payment_voided: "Deshizo un pago",
 };
 
-const ENTITY_LABELS: Record<string, string> = { profiles: "Integrante", group_settings: "Configuración" };
+const ENTITY_LABELS: Record<string, string> = {
+  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", expenses: "Juntada", payments: "Pago",
+};
 
 const fmt = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
@@ -95,6 +104,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                     <span className="text-graphite/60">
                       {ENTITY_LABELS[r.entity] ?? r.entity}
                       {r.entity === "profiles" && name.get(r.entity_id) ? `: ${name.get(r.entity_id)}` : ""}
+                      {r.entity === "expenses" && (r.new_values?.title || r.old_values?.title) ? `: ${String(r.new_values?.title ?? r.old_values?.title)}` : ""}
+                      {r.entity === "payments" && r.new_values?.amount_cents ? `: ${formatMoney(Number(r.new_values.amount_cents))}` : ""}
                     </span>
                   </p>
                   <time className="text-xs text-graphite/50">{fmt.format(new Date(r.occurred_at))}</time>
@@ -110,8 +121,21 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   );
 }
 
+const HIDDEN = new Set(["updated_at", "base_amount_cents", "fx_rate_date", "base_currency"]);
+
+function show(key: string, v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (key.endsWith("_cents")) return formatMoney(Number(v));
+  if (key === "shares" && Array.isArray(v)) {
+    const active = v.filter((s: { is_participant?: boolean }) => s.is_participant !== false);
+    return `${active.length} participantes`;
+  }
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
 function Diff({ before, after }: { before: Record<string, unknown>; after: Record<string, unknown> }) {
-  const keys = Object.keys(after).filter((k) => k !== "updated_at" && JSON.stringify(before[k]) !== JSON.stringify(after[k]));
+  const keys = Object.keys(after).filter((k) => !HIDDEN.has(k) && JSON.stringify(before[k]) !== JSON.stringify(after[k]));
   if (keys.length === 0) return null;
   return (
     <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
@@ -119,7 +143,8 @@ function Diff({ before, after }: { before: Record<string, unknown>; after: Recor
         <div key={k} className="contents">
           <dt className="font-mono text-graphite/50">{k}</dt>
           <dd className="truncate">
-            <span className="text-graphite/50 line-through">{String(before[k] ?? "—")}</span> → {String(after[k] ?? "—")}
+            <span className="text-graphite/50 line-through">{show(k, before[k])}</span> → {show(k, after[k])}
+            {k === "shares" && show(k, before[k]) === show(k, after[k]) && " (cambió la división)"}
           </dd>
         </div>
       ))}

@@ -10,6 +10,7 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 import { displayName, initials } from "@/lib/utils";
 import { ProfileForm } from "./profile-form";
 import { AvatarPicker } from "./avatar-picker";
+import { MemberFinancials, type MovementFilters } from "@/components/expenses/member-financials";
 
 export const metadata: Metadata = { title: "Mi perfil · MAMANÍ CLUB" };
 
@@ -20,7 +21,8 @@ const dateFmt = new Intl.DateTimeFormat("es-AR", {
   year: "numeric",
 });
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<MovementFilters> }) {
+  const filters = await searchParams;
   const { profile } = await requireActiveMember();
   const urls = await signAvatarUrls([profile.avatar_path]);
   const avatarUrl = profile.avatar_path ? urls.get(profile.avatar_path) : null;
@@ -49,9 +51,8 @@ export default async function ProfilePage() {
         </div>
       </Card>
 
-      <p className="mt-6 rounded-2xl bg-white/50 px-4 py-3 text-sm text-graphite/60">
-        Tu resumen financiero (adelantos, consumo y deudas) aparece acá desde la Fase 2.
-      </p>
+      <h2 className="mt-10 mb-3 font-display text-xl">Mis números</h2>
+      <MemberFinancials memberId={profile.id} filters={filters} basePath="/perfil" />
 
       <h2 className="mt-10 mb-3 font-display text-xl">Mis datos</h2>
       <Card>
