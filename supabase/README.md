@@ -10,15 +10,13 @@
 | Archivo | Contenido | Aplicada |
 |---|---|---|
 | 0001_fundamentos.sql | Perfiles, roles, aprobación, monedas, configuración, auditoría, avatares | ✅ |
-| 0002_contrasena_temporal.sql | Contraseña temporal generada por admin (auditada) | ⏳ |
+| 0002_contrasena_temporal.sql | Contraseña temporal generada por admin (auditada) | ✅ |
+| 0003_gastos_y_pagos.sql | Categorías, juntadas, partes, pagos, saldos y funciones financieras | ⏳ |
 
 ## Correr las pruebas localmente
 
+Con un Postgres 16 disponible (en CI se corren solas en cada PR):
+
 ```bash
-createdb t
-psql -d t -f supabase/tests/_stub_supabase.sql
-psql -d t -f supabase/migrations/0001_fundamentos.sql
-psql -d t -f supabase/migrations/0002_contrasena_temporal.sql
-psql -d t -f supabase/tests/0001_fundamentos.test.sql
-psql -d t -f supabase/tests/0002_contrasena_temporal.test.sql
+PGHOST=localhost PGUSER=postgres npm run test:db
 ```
