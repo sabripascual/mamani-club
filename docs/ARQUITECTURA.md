@@ -123,9 +123,8 @@ audit_log           id, actor_id, occurred_at, entity, entity_id, action, old_va
   sobrante se asigna de forma determinística (por orden de ID) para que la suma sea exacta.
 - **División personalizada:** la función rechaza el gasto si `Σ shares ≠ amount_cents`.
 - **Deuda:** cada participante distinto del pagador debe `share − pagos activos` al pagador.
-- **Sobrepago:** rechazado salvo que se marque explícitamente como crédito (ver pregunta 3).
-- **Pago duplicado:** `idempotency_key` único por envío de formulario (protege contra
-  doble clic o reintentos de red) + verificación de que el pago no supere lo pendiente.
+- **Pago = parte exacta** (ADR-010): sobrepagos y pagos parciales no existen; un pago activo
+  por parte como máximo.
 - **Edición de un gasto con pagos:** se recalculan los shares dentro de la transacción, se
   guarda un snapshot antes/después en auditoría y, si a alguien le queda un pago mayor que
   su nuevo share, se marca la diferencia como saldo a favor.
@@ -198,7 +197,27 @@ y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto re
 - **ADR-006** Zona horaria `America/Argentina/Buenos_Aires`: `occurred_on` es `date` (sin
   hora); los timestamps son `timestamptz` y se muestran en hora de Buenos Aires.
 
-## 10. Riesgos y ambigüedades
+- **ADR-008** Login con **email o username**. El username se traduce a email en el
+  servidor (`email_for_login`, solo `service_role`) para no exponer emails.
+- **ADR-009** **Solo ARS por ahora.** El modelo guarda moneda, importe en moneda base y
+  tipo de cambio en cada gasto (con ARS el tipo de cambio es 1), y la tabla `currencies`
+  ya existe con USD/EUR deshabilitadas. Habilitar otra moneda no requiere rediseño.
+- **ADR-010** **Pagos simples por obligación.** Cada deuda es la parte exacta de una
+  integrante en una juntada. Se salda con un botón **"Marcar como pagado"**, sin ingresar
+  importe: el pago registrado es siempre igual a la parte. No hay pagos parciales de una
+  parte, ni pagos agrupados entre juntadas, ni sobrepagos posibles.
+  - Una juntada queda *parcialmente saldada* cuando algunas partes están pagadas y otras no.
+  - Un pago por parte como máximo (restricción única) → los duplicados son imposibles.
+  - Pueden marcar como pagado: la deudora, quien adelantó el dinero o una admin. Se puede
+    deshacer (anulación auditada, nunca un borrado).
+  - La simplificación de deudas queda como **sugerencia informativa**.
+- **ADR-011** Rankings temáticos por categoría: *más fiestera* = juntadas de "Fiestas y
+  salidas"; *reina del tercer tiempo* = subcategoría "Tercer tiempo"; *participación
+  deportiva* = "Deportes y terceros tiempos".
 
-Ver la sección "Preguntas abiertas" en el issue o en el chat de planificación. Las respuestas
-se incorporan acá como ADR.
+## 10. Riesgos y limitaciones conocidas
+
+- Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de
+  latencia desde Argentina. Aceptable para el uso del grupo.
+- Sin emails: recuperar una contraseña depende de una admin.
+- 1 GB de fotos: vigilar el uso; plan B Cloudflare R2.
