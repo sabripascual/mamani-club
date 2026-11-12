@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Users } from "lucide-react";
+import { Check, UserPlus, Users, X } from "lucide-react";
 import type { CategoryTree, Member } from "@/lib/expenses/types";
 import { centsToInput, formatMoney, parseMoney } from "@/lib/money/format";
 import { equalSplit } from "@/lib/money/split";
@@ -19,7 +19,15 @@ export type GastoInitial = {
   paid_by: string;
   split_type: "equal" | "custom";
   shares: { member_id: string; amount_cents: number }[];
+  /** Invitadas (no son del club): nombre, responsable y su parte. */
+  guests?: { name: string; responsible_id: string; amount_cents: number }[];
 };
+
+type Guest = { key: string; name: string; responsible: string };
+let guestSeq = 0;
+const newKey = () => `g${++guestSeq}`;
+/** Clave de una invitada para la vista previa (misma idea que la base: después de la parte de su responsable). */
+const guestUnit = (g: Guest) => `${g.responsible}|${g.name.trim().toLowerCase()}`;
 
 /**
  * Campos de un gasto. `prefix` permite usarlos dentro del formulario de juntada
@@ -44,9 +52,12 @@ export function GastoFields({
   const [paidBy, setPaidBy] = useState(initial?.paid_by ?? meId);
   const [participants, setParticipants] = useState<string[]>(initial?.shares.map((s) => s.member_id) ?? defaultParticipants);
   const [split, setSplit] = useState<"equal" | "custom">(initial?.split_type ?? "equal");
-  const [custom, setCustom] = useState<Record<string, string>>(
-    Object.fromEntries((initial?.shares ?? []).map((s) => [s.member_id, centsToInput(s.amount_cents)])),
-  );
+  const [guests, setGuests] = useState<Guest[]>(() =>
+    (initial?.guests ?? []).map((g) => ({ key: newKey(), name: g.name, responsible: g.responsible_id })));
+  const [custom, setCustom] = useState<Record<string, string>>(() => ({
+    ...Object.fromEntries((initial?.shares ?? []).map((s) => [s.member_id, centsToInput(s.amount_cents)])),
+    ...Object.fromEntries((initial?.guests ?? []).map((g, i) => [`guest:${guests[i]?.key}`, centsToInput(g.amount_cents)])),
+  }));
 
   // Para elegir: activas + desactivadas que ya estaban.
   const selectable = useMemo(
@@ -57,8 +68,11 @@ export function GastoFields({
   const amountCents = parseMoney(amount);
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const selectedSub = selectedCategory?.children.find((c) => c.id === subcategoryId);
-  const preview = amountCents ? equalSplit(amountCents, participants) : new Map<string, number>();
-  const customSum = participants.reduce((acc, id) => acc + (custom[id]?.trim() === "0" ? 0 : (parseMoney(custom[id] ?? "") ?? 0)), 0);
+  const preview = amountCents ? equalSplit(amountCents, [...participants, ...guests.map(guestUnit)]) : new Map<string, number>();
+  const cents = (v?: string) => (v?.trim() === "0" ? 0 : (parseMoney(v ?? "") ?? 0));
+  const customSum = participants.reduce((acc, id) => acc + cents(custom[id]), 0) + guests.reduce((acc, g) => acc + cents(custom[`guest:${g.key}`]), 0);
+  const setGuest = (key: string, patch: Partial<Guest>) => setGuests((gs) => gs.map((g) => (g.key === key ? { ...g, ...patch } : g)));
+  const guestOf = (id: string) => (id === meId ? "tu invitada" : `invitada de ${displayName(members.find((x) => x.id === id) ?? { first_name: "—" })}`);
   const remaining = (amountCents ?? 0) - customSum;
   // Mientras no se toquen a mano, las participantes siguen a las asistentes de la juntada.
   const [touched, setTouched] = useState(!!initial);
@@ -166,6 +180,38 @@ export function GastoFields({
       </fieldset>
 
       <fieldset>
+        <legend className="mb-1 text-sm font-semibold text-graphite/80">Invitadas <span className="font-normal text-graphite/50">(opcional)</span></legend>
+        <p className="mb-3 text-xs text-graphite/55">Alguien que no es del club. Su parte la paga la responsable y no le suma presencia ni consumo.</p>
+        {guests.length > 0 && (
+          <ul className="mb-3 flex flex-col gap-2">
+            {guests.map((g) => (
+              <li key={g.key} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/60 p-2 ring-1 ring-graphite/5">
+                <input name={n("guest_name")} value={g.name} onChange={(e) => setGuest(g.key, { name: e.target.value })} maxLength={40}
+                  placeholder="Nombre" aria-label="Nombre de la invitada" required
+                  className="h-10 min-w-0 flex-1 rounded-xl border border-graphite/10 bg-white px-3 outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
+                <label className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-graphite/60">
+                  <span className="shrink-0">a cargo de</span>
+                  <select name={n("guest_responsible")} value={g.responsible} onChange={(e) => setGuest(g.key, { responsible: e.target.value })}
+                    className="h-10 min-w-0 flex-1 rounded-xl border border-graphite/10 bg-white px-2 text-sm font-semibold text-graphite outline-none focus:border-rose">
+                    {selectable.filter((m) => m.status === "active" || m.id === g.responsible).map((m) => <option key={m.id} value={m.id}>{label(m)}</option>)}
+                  </select>
+                </label>
+                <button type="button" onClick={() => setGuests((gs) => gs.filter((x) => x.key !== g.key))} aria-label={`Quitar a ${g.name || "la invitada"}`}
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-graphite/50 hover:bg-graphite/5 hover:text-graphite">
+                  <X className="size-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" onClick={() => setGuests((gs) => [...gs, { key: newKey(), name: "", responsible: meId }])}
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white/70 px-4 text-sm font-semibold text-rose-dark ring-1 ring-rose/30 hover:bg-white">
+          <UserPlus className="size-4" /> Sumar invitada
+        </button>
+        {f("guests") && <p className="mt-1.5 text-sm text-rose-dark">{f("guests")}</p>}
+      </fieldset>
+
+      <fieldset>
         <legend className="mb-2 text-sm font-semibold text-graphite/80">División</legend>
         <input type="hidden" name={n("split_type")} value={split} />
         <div className="mb-4 inline-flex rounded-full bg-white/70 p-1 ring-1 ring-graphite/10">
@@ -176,7 +222,7 @@ export function GastoFields({
             </button>
           ))}
         </div>
-        {participants.length === 0 ? (
+        {participants.length === 0 && guests.length === 0 ? (
           <p className="text-sm text-graphite/55">Elegí participantes para ver la división.</p>
         ) : split === "equal" ? (
           <ul className="divide-y divide-graphite/5 rounded-2xl bg-white/60">
@@ -184,6 +230,12 @@ export function GastoFields({
               <li key={m.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
                 <span className="flex items-center gap-2"><MemberAvatar m={m} />{label(m)}</span>
                 <span className="font-semibold tabular-nums">{preview.has(m.id) ? formatMoney(preview.get(m.id)!) : "—"}</span>
+              </li>
+            ))}
+            {guests.map((g) => (
+              <li key={g.key} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <GuestLabel name={g.name} caption={guestOf(g.responsible)} />
+                <span className="font-semibold tabular-nums">{preview.has(guestUnit(g)) ? formatMoney(preview.get(guestUnit(g))!) : "—"}</span>
               </li>
             ))}
           </ul>
@@ -195,6 +247,14 @@ export function GastoFields({
                   <span className="flex min-w-0 items-center gap-2"><MemberAvatar m={m} /><span className="truncate">{label(m)}</span></span>
                   <input name={n(`share_${m.id}`)} inputMode="decimal" placeholder="0" value={custom[m.id] ?? ""}
                     onChange={(e) => setCustom({ ...custom, [m.id]: e.target.value })} aria-label={`Parte de ${displayName(m)}`}
+                    className="h-10 w-32 rounded-xl border border-graphite/10 bg-white px-3 text-right tabular-nums outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
+                </li>
+              ))}
+              {guests.map((g, i) => (
+                <li key={g.key} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                  <GuestLabel name={g.name} caption={guestOf(g.responsible)} />
+                  <input name={n(`gshare_${i}`)} inputMode="decimal" placeholder="0" value={custom[`guest:${g.key}`] ?? ""}
+                    onChange={(e) => setCustom({ ...custom, [`guest:${g.key}`]: e.target.value })} aria-label={`Parte de ${g.name || "la invitada"}`}
                     className="h-10 w-32 rounded-xl border border-graphite/10 bg-white px-3 text-right tabular-nums outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
                 </li>
               ))}
@@ -213,5 +273,19 @@ export function GastoFields({
             className="rounded-2xl border border-graphite/10 bg-white/70 px-4 py-3 text-base outline-none focus:border-rose focus:bg-white focus:ring-4 focus:ring-rose/15" />
         </div>
     </div>
+  );
+}
+
+function GuestLabel({ name, caption }: { name: string; caption: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-bold text-graphite">
+        {name.trim().charAt(0).toUpperCase() || "?"}
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block truncate">{name.trim() || "Invitada"}</span>
+        <span className="block truncate text-xs text-graphite/55">{caption}</span>
+      </span>
+    </span>
   );
 }

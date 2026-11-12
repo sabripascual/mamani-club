@@ -16,7 +16,7 @@ import { SettleButton } from "../../actions-client";
 
 export const metadata: Metadata = { title: "Gasto · MAMANÍ CLUB" };
 
-/** Detalle de un gasto en solo lectura (todas). Editar: quien lo cargó o una admin. */
+/** Detalle de un gasto en solo lectura (todas). Editar: quien lo cargó, la responsable de una invitada o una admin. */
 export default async function GastoPage({ params }: { params: Promise<{ id: string; gastoId: string }> }) {
   const { id, gastoId } = await params;
   if (!/^[0-9a-f-]{36}$/.test(gastoId)) notFound();
@@ -28,7 +28,8 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
   if (!data || data.gasto.juntada_id !== id) notFound();
   const { gasto: g, shares } = data;
   const me = profile.id;
-  const canEdit = g.status === "active" && juntada?.status === "active" && (profile.role === "admin" || g.created_by === me);
+  const guestResponsible = shares.some((s) => s.guest_name && s.member_id === me);
+  const canEdit = g.status === "active" && juntada?.status === "active" && (profile.role === "admin" || g.created_by === me || guestResponsible);
   const cat = catById.get(g.category_id);
   const sub = g.subcategory_id ? catById.get(g.subcategory_id) : undefined;
   const parts = shares.filter((s) => s.is_participant).sort((a, b) => b.amount_cents - a.amount_cents);
@@ -98,8 +99,18 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
       <h2 className="mb-3 font-display text-xl">Parte de cada una</h2>
       <ul className="mb-8 flex flex-col gap-2">
         {parts.map((s) => (
-          <li key={s.member_id} className={`flex items-center justify-between gap-3 rounded-2xl p-3 ${s.member_id === me ? "bg-white ring-1 ring-rose/40" : "bg-white/60"}`}>
-            <span className="flex items-center gap-3"><MemberAvatar m={memberById.get(s.member_id)} /><span className="font-semibold">{memberName(memberById.get(s.member_id), me)}</span></span>
+          <li key={`${s.member_id}|${s.guest_name ?? ""}`} className={`flex items-center justify-between gap-3 rounded-2xl p-3 ${s.member_id === me ? "bg-white ring-1 ring-rose/40" : "bg-white/60"}`}>
+            {s.guest_name ? (
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-bold">{s.guest_name.charAt(0).toUpperCase()}</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate font-semibold">{s.guest_name}</span>
+                  <span className="block truncate text-xs text-graphite/55">{s.member_id === me ? "tu invitada · la pagás vos" : `invitada de ${memberName(memberById.get(s.member_id))} · la paga ella`}</span>
+                </span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-3"><MemberAvatar m={memberById.get(s.member_id)} /><span className="font-semibold">{memberName(memberById.get(s.member_id), me)}</span></span>
+            )}
             <span className="font-semibold tabular-nums">{formatMoney(s.amount_cents, g.currency)}</span>
           </li>
         ))}

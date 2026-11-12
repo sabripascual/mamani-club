@@ -162,6 +162,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                     <span className="block truncate font-semibold">{g.title}</span>
                     <span className="block truncate text-xs text-graphite/55">
                       {g.paid_by === me ? "pagaste vos" : `pagó ${memberName(memberById.get(g.paid_by))}`} · {sub?.name ?? cat?.name} · entre {parts.length}
+                      {parts.some((p) => p.guest_name) && ` (con ${parts.filter((p) => p.guest_name).map((p) => p.guest_name).join(", ")})`}
                     </span>
                   </span>
                   <span className="text-right">

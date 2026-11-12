@@ -13,7 +13,7 @@ async function nameOf(admin: ReturnType<typeof createAdminClient>, id: string) {
 /**
  * "¡Poniendo estaba la gansa!": avisa a cada participante de un gasto que se lo
  * cargaron (con su parte y, si corresponde, lo que debe en la juntada). No le llega
- * a quien lo cargó.
+ * a quien lo cargó. A la responsable de una invitada le avisa también la parte de ella.
  */
 export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memberIds: string[], actorId: string) {
   const targets = [...new Set(memberIds)].filter((m) => m !== actorId);
@@ -22,7 +22,7 @@ export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memb
   const [{ data: g }, { data: j }, { data: shares }, { data: transfers }, { data: subs }, actor] = await Promise.all([
     admin.from("expenses").select("title, amount_cents, currency").eq("id", gastoId).single(),
     admin.from("juntadas").select("title").eq("id", juntadaId).single(),
-    admin.from("expense_shares").select("member_id, amount_cents").eq("expense_id", gastoId).in("member_id", targets),
+    admin.from("expense_shares").select("member_id, amount_cents, guest_name").eq("expense_id", gastoId).in("member_id", targets),
     admin.rpc("juntada_transfers", { p_juntada: juntadaId }),
     admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").in("member_id", targets),
     nameOf(admin, actorId),
@@ -33,14 +33,26 @@ export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memb
     owed.set(t.from_member, (owed.get(t.from_member) ?? 0) + Number(t.amount_cents));
   }
   const money = (c: number) => formatMoney(c, g.currency, { round: true });
+  // Una integrante puede tener su parte y la de sus invitadas: un solo aviso por persona.
+  const byMember = new Map<string, { own: number | null; guests: { name: string; cents: number }[] }>();
+  for (const s of (shares ?? []) as { member_id: string; amount_cents: number; guest_name: string | null }[]) {
+    const e = byMember.get(s.member_id) ?? { own: null, guests: [] };
+    if (s.guest_name) e.guests.push({ name: s.guest_name, cents: Number(s.amount_cents) });
+    else e.own = Number(s.amount_cents);
+    byMember.set(s.member_id, e);
+  }
   await Promise.all(
-    (shares ?? []).map((s) => {
-      const mine = ((subs ?? []) as Sub[]).filter((x) => x.member_id === s.member_id);
+    [...byMember].map(([memberId, e]) => {
+      const mine = ((subs ?? []) as Sub[]).filter((x) => x.member_id === memberId);
       if (mine.length === 0) return 0;
-      const debt = owed.get(s.member_id) ?? 0;
-      return sendToMember(s.member_id, {
-        title: "¡Poniendo estaba la gansa!",
-        body: `${actor} cargó ${g.title} (${money(Number(g.amount_cents))}) en ${j.title}. Tu parte: ${money(Number(s.amount_cents))}${debt > 0 ? ` · Debés ${money(debt)}` : ""}`,
+      const debt = owed.get(memberId) ?? 0;
+      const parts = [
+        ...(e.own !== null ? [`Tu parte: ${money(e.own)}`] : []),
+        ...e.guests.map((x) => `${x.name} (tu invitada): ${money(x.cents)}`),
+      ];
+      return sendToMember(memberId, {
+        title: e.own === null ? "¡Tu invitada está en un gasto!" : "¡Poniendo estaba la gansa!",
+        body: `${actor} cargó ${g.title} (${money(Number(g.amount_cents))}) en ${j.title}. ${parts.join(" · ")}${debt > 0 ? ` · Debés ${money(debt)}` : ""}`,
         url: `/gastos/${juntadaId}`,
         tag: `gasto-${gastoId}`,
       }, mine);

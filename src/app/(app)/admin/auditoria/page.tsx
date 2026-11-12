@@ -139,8 +139,9 @@ function show(key: string, v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
   if (key.endsWith("_cents")) return formatMoney(Number(v));
   if (key === "shares" && Array.isArray(v)) {
-    const active = v.filter((s: { is_participant?: boolean }) => s.is_participant !== false);
-    return `${active.length} participantes`;
+    const active = v.filter((s: { is_participant?: boolean }) => s.is_participant !== false) as { guest_name?: string | null }[];
+    const guests = active.filter((s) => s.guest_name).map((s) => s.guest_name);
+    return `${active.length} participantes${guests.length ? ` (invitadas: ${guests.join(", ")})` : ""}`;
   }
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);

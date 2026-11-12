@@ -9,6 +9,7 @@
  *  - Importes en moneda base (ARS) con la conversión guardada en cada gasto.
  *  - Adelantado (gastos que pagó) y consumo (sus partes) van separados.
  *  - Lo que se debe sale del saldo neto de cada una en cada juntada.
+ *  - Invitadas: su parte NO es consumo ni presencia de la responsable; solo suma al total gastado.
  */
 
 export type StatJuntada = { id: string; title: string; occurred_on: string; type_id: string; created_by: string };
@@ -21,7 +22,8 @@ export type StatGasto = {
   paid_by: string;
   created_by: string;
 };
-export type StatShare = { expense_id: string; member_id: string; amount_cents: number; is_participant: boolean };
+/** `guest_name` con valor = parte de una invitada a cargo de `member_id` (no es consumo de la responsable). */
+export type StatShare = { expense_id: string; member_id: string; amount_cents: number; is_participant: boolean; guest_name?: string | null };
 export type StatAttendee = { juntada_id: string; member_id: string };
 export type StatNet = { juntada_id: string; member_id: string; net_cents: number };
 export type StatSettlement = { juntada_id: string; amount_cents: number };
@@ -225,6 +227,7 @@ export function memberStats(ds: Dataset): MemberStat[] {
     if (tercer && t === tercer) st.tercerTiempo += 1;
   }
   for (const s of ds.shares) {
+    if (s.guest_name) continue;
     const g = gastoById.get(s.expense_id);
     const st = stats.get(s.member_id);
     if (g && st) st.consumedCents += toBase(s.amount_cents, g.fx_rate);
@@ -327,7 +330,7 @@ export function personalSummary(ds: Dataset, memberId: string, period?: { from?:
   const byMonthMap = new Map<string, number>();
   const perJuntada = new Map<string, number>();
   for (const s of ds.shares) {
-    if (s.member_id !== memberId) continue;
+    if (s.member_id !== memberId || s.guest_name) continue;
     const g = gastoById.get(s.expense_id);
     const j = g && jById.get(g.juntada_id);
     if (!g || !j) continue;
