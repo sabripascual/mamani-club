@@ -35,7 +35,16 @@ Nombra la juntada pendiente más vieja y cuántas más tiene sin saldar.
 | 2 | APURÁ ESAS RATONAS! | Tirá un mensajito al grupo… |
 | 3+ | NOSOTRAS TE AVISAMOS! | Si no les hacés acordar… ¡a llorar al campito! |
 
-## Decisiones técnicas previstas
+## Detalle de implementación
+
+- A partir del mensaje 2 de deudoras, el texto agrega una segunda línea con la juntada y
+  el monto ("Asado · $ 25.000"), porque llega una notificación por juntada.
+- El resumen de cobros agrega: "{juntada más vieja} y N juntadas más · te deben $X".
+- Si una integrante no tiene dispositivos activados, no se le manda nada y su secuencia
+  no avanza (empieza por el mensaje 1 cuando las active).
+- La secuencia de cobros se reinicia si en algún momento quedó todo saldado.
+
+## Decisiones técnicas
 
 - Web Push estándar con claves VAPID (gratis). La clave privada va solo en Vercel.
 - En iPhone requiere la app instalada en la pantalla de inicio (iOS 16.4+) y que la
