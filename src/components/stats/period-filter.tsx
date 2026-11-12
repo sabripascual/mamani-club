@@ -7,13 +7,14 @@ type Opt = { id: string; name: string };
 /** Filtros en una sola fila arriba de los gráficos (año, mes, rango, categoría, integrante). */
 export function PeriodFilter({
   sp, basePath, categories, members, showCategory = true, showMember = true,
-}: { sp: PeriodParams; basePath: string; categories: Opt[]; members: Opt[]; showCategory?: boolean; showMember?: boolean }) {
+}: { sp: PeriodParams & { vista?: string }; basePath: string; categories: Opt[]; members: Opt[]; showCategory?: boolean; showMember?: boolean }) {
   const current = new Date().getFullYear();
   const years = Array.from({ length: 6 }, (_, i) => current - i);
   const cls = "h-10 rounded-full border border-graphite/10 bg-white/70 px-3 text-sm";
-  const active = Object.values(sp).some(Boolean);
+  const active = Object.entries(sp).some(([k, v]) => k !== "vista" && !!v);
   return (
     <form action={basePath} className="mb-6">
+      {sp.vista && <input type="hidden" name="vista" value={sp.vista} />}
       <div className="flex flex-wrap gap-2">
         <select name="anio" defaultValue={sp.anio ?? ""} className={cls} aria-label="Año">
           <option value="">Todo el historial</option>
@@ -36,7 +37,7 @@ export function PeriodFilter({
           </select>
         )}
         <button className="h-10 rounded-full bg-graphite px-4 text-sm font-semibold text-cream">Aplicar</button>
-        {active && <Link href={basePath} className="inline-flex h-10 items-center px-2 text-sm font-semibold text-rose-dark">Limpiar</Link>}
+        {active && <Link href={sp.vista ? `${basePath}?vista=${sp.vista}` : basePath} className="inline-flex h-10 items-center px-2 text-sm font-semibold text-rose-dark">Limpiar</Link>}
       </div>
       <details className="mt-2 text-sm" open={!!(sp.desde || sp.hasta)}>
         <summary className="cursor-pointer text-graphite/60">Rango de fechas</summary>

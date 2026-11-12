@@ -14,11 +14,16 @@ import { displayName } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Wordmark } from "@/components/brand";
+import { Avatar } from "@/components/ui/avatar";
+import { signAvatarUrls } from "@/lib/storage/avatars";
+import { initials } from "@/lib/utils";
 import { InstallHint } from "@/components/pwa/install-hint";
 import { PeriodFilter } from "@/components/stats/period-filter";
 import { Dashboard } from "@/components/stats/dashboard";
+import { PersonalDashboard } from "@/components/stats/personal-dashboard";
+import { ViewToggle } from "@/components/stats/view-toggle";
 
-export default async function HomePage({ searchParams }: { searchParams: Promise<PeriodParams> }) {
+export default async function HomePage({ searchParams }: { searchParams: Promise<PeriodParams & { vista?: string }> }) {
   const sp = await searchParams;
   const { profile } = await requireActiveMember();
   const today = todayAR();
@@ -26,15 +31,23 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     loadDataset(), getMemberBalances(profile.id), getCategories(), getMembers(), getAlbums({ limit: 12 }), getRecentExpenses(3),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
-  const pendingRequests = profile.role === "admin" ? await pendingRequestsCount() : 0;
+  const [pendingRequests, myAvatar] = await Promise.all([
+    profile.role === "admin" ? pendingRequestsCount() : Promise.resolve(0),
+    signAvatarUrls([profile.avatar_path]).then((m) => (profile.avatar_path ? (m.get(profile.avatar_path) ?? null) : null)),
+  ]);
   const { filters } = parsePeriod(sp, today);
 
   return (
     <>
       <header className="mb-6">
         <Wordmark className="w-56 sm:w-64" priority />
-        <p className="mt-4 font-display text-[1.7rem] leading-tight font-semibold">Hola, {displayName(profile)} 💖</p>
-        <p className="text-sm text-graphite/60">La cuenta de nuestras juntadas.</p>
+        <Link href="/perfil" className="mt-4 flex items-center gap-3">
+          <Avatar src={myAvatar} initials={initials(profile)} size="md" className="ring-rose" />
+          <span>
+            <span className="block font-display text-[1.6rem] leading-tight font-semibold">Hola, {displayName(profile)} 💖</span>
+            <span className="block text-sm text-graphite/60">La cuenta de nuestras juntadas.</span>
+          </span>
+        </Link>
       </header>
       <PendingRequestsBanner count={pendingRequests} />
       <InstallHint />
@@ -65,8 +78,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </EmptyState>
       ) : (
         <>
-          <PeriodFilter sp={sp} basePath="/" categories={tree} members={members.map((m) => ({ id: m.id, name: displayName(m) }))} />
-          <Dashboard dataset={dataset} filters={filters} today={today} memberById={byId} />
+          <ViewToggle sp={sp} current={sp.vista === "yo" ? "yo" : "grupo"} />
+          <PeriodFilter sp={sp} basePath="/" categories={tree} members={members.map((m) => ({ id: m.id, name: displayName(m) }))} showMember={sp.vista !== "yo"} />
+          {sp.vista === "yo" ? (
+            <PersonalDashboard dataset={dataset} filters={filters} today={today} memberId={profile.id} />
+          ) : (
+            <Dashboard dataset={dataset} filters={filters} today={today} memberById={byId} />
+          )}
         </>
       )}
 
