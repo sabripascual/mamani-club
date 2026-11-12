@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Identidad MAMANÍ CLUB */
+@theme {
+  --color-blush: #f3dce5;
+  --color-powder: #bfd4e8;
+  --color-cream: #f8f5f0;
+  --color-graphite: #38333b;
+  --color-rose: #d89a9e;
+  --color-rose-dark: #b9787d;
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+
+  --radius-card: 1.5rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-graphite);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
