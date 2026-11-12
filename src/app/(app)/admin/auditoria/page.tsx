@@ -24,10 +24,14 @@ const ACTION_LABELS: Record<string, string> = {
   payment_created: "Registró un pago",
   refund_created: "Registró un reintegro",
   payment_voided: "Deshizo un pago",
+  photo_deleted: "Borró su foto",
+  photo_moderated: "Moderó una foto",
+  comment_deleted: "Borró su comentario",
+  comment_moderated: "Moderó un comentario",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
-  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", expenses: "Juntada", payments: "Pago",
+  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", expenses: "Juntada", payments: "Pago", photos: "Foto", photo_comments: "Comentario",
 };
 
 const fmt = new Intl.DateTimeFormat("es-AR", {

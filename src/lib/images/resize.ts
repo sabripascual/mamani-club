@@ -4,8 +4,16 @@
  */
 export async function resizeImage(
   file: File,
-  { maxSize, quality = 0.85, square = false }: { maxSize: number; quality?: number; square?: boolean },
+  opts: { maxSize: number; quality?: number; square?: boolean },
 ): Promise<Blob> {
+  return (await resizeImageWithSize(file, opts)).blob;
+}
+
+/** Igual que resizeImage, pero también devuelve el tamaño final en píxeles. */
+export async function resizeImageWithSize(
+  file: File | Blob,
+  { maxSize, quality = 0.85, square = false }: { maxSize: number; quality?: number; square?: boolean },
+): Promise<{ blob: Blob; width: number; height: number }> {
   const bitmap = await createImageBitmap(file);
   let sx = 0,
     sy = 0,
@@ -26,11 +34,12 @@ export async function resizeImage(
 
   const toBlob = (type: string) =>
     new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+  const size = { width: canvas.width, height: canvas.height };
   const webp = await toBlob("image/webp");
-  if (webp && webp.type === "image/webp") return webp;
+  if (webp && webp.type === "image/webp") return { blob: webp, ...size };
   const jpeg = await toBlob("image/jpeg");
   if (!jpeg) throw new Error("No se pudo procesar la imagen");
-  return jpeg;
+  return { blob: jpeg, ...size };
 }
 
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];

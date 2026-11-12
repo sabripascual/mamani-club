@@ -12,6 +12,10 @@ import { CategoryIcon } from "@/components/expenses/category-icon";
 import { StatusChip } from "@/components/expenses/status-chip";
 import { MemberAvatar, memberName } from "@/components/expenses/member-avatar";
 import { MarkPaidButton, UndoPaymentButton, VoidExpenseButton } from "./actions-client";
+import { getAlbum } from "@/lib/photos/queries";
+import { toMiniMembers } from "@/lib/photos/members";
+import { Gallery } from "@/components/photos/gallery";
+import { PhotoUploader } from "@/components/photos/photo-uploader";
 
 export const metadata: Metadata = { title: "Juntada · MAMANÍ CLUB" };
 
@@ -19,7 +23,9 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const { profile } = await requireActiveMember();
-  const [data, { byId: catById }, { byId: memberById }] = await Promise.all([getExpense(id), getCategories({ includeArchived: true }), getMembers()]);
+  const [data, { byId: catById }, { members, byId: memberById }, album] = await Promise.all([
+    getExpense(id), getCategories({ includeArchived: true }), getMembers(), getAlbum(id, profile.id, { limit: 6 }),
+  ]);
   if (!data) notFound();
   const { expense: e, shares, payments, status } = data;
 
@@ -155,6 +161,21 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
             })}
           </ul>
         </>
+      )}
+
+      {e.status === "active" && (
+        <section className="mb-8">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="font-display text-xl">Fotos{album.total > 0 && <span className="ml-2 text-base text-graphite/50">{album.total}</span>}</h2>
+            {album.total > 0 && <Link href={`/recuerdos/${e.id}`} className="text-sm font-semibold text-rose-dark">Ver álbum</Link>}
+          </div>
+          {album.total > 0 && (
+            <div className="mb-3">
+              <Gallery photos={album.photos} members={toMiniMembers(members)} meId={me} isAdmin={isAdmin} expenseId={e.id} />
+            </div>
+          )}
+          <PhotoUploader expenseId={e.id} variant={album.total > 0 ? "subtle" : "primary"} />
+        </section>
       )}
 
       {e.description && (
