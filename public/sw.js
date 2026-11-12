@@ -7,12 +7,14 @@
  * - Notificaciones push: título + texto + ícono; al tocarla abre la juntada.
  * Cambiar VERSION fuerza a que las instalaciones viejas limpien su caché.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC_CACHE = `mamani-static-${VERSION}`;
 const PRECACHE = ["/offline.html", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(PRECACHE)));
+  // Se activa enseguida: así las notificaciones las maneja siempre la versión nueva.
+  // Es seguro porque este service worker solo cachea archivos estáticos.
+  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
