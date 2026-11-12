@@ -1,4 +1,5 @@
 import { Wordmark } from "@/components/brand";
+import { Footer } from "@/components/footer";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <main className="relative mx-auto flex min-h-dvh max-w-md flex-col px-6 pt-[max(3rem,env(safe-area-inset-top))] pb-12">
         <Wordmark className="w-44" priority />
         <div className="flex flex-1 flex-col justify-center py-10">{children}</div>
+        <Footer className="mt-4" />
       </main>
     </div>
   );
