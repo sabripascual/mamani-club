@@ -11,7 +11,7 @@
 |---|---|---|
 | 0001_fundamentos.sql | Perfiles, roles, aprobación, monedas, configuración, auditoría, avatares | ✅ |
 | 0002_contrasena_temporal.sql | Contraseña temporal generada por admin (auditada) | ✅ |
-| 0003_gastos_y_pagos.sql | Categorías, juntadas, partes, pagos, saldos y funciones financieras | ⏳ |
+| 0003_gastos_y_pagos.sql | Categorías, juntadas, partes, pagos, saldos y funciones financieras | ✅ |
 
 ## Correr las pruebas localmente
 
