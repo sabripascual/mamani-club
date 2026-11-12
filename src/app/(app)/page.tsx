@@ -8,7 +8,6 @@ import { loadDataset, parsePeriod, type PeriodParams } from "@/lib/stats/load";
 import { formatMoney } from "@/lib/money/format";
 import { todayAR } from "@/lib/dates";
 import { displayName } from "@/lib/utils";
-import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Wordmark } from "@/components/brand";
@@ -28,8 +27,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <Wordmark className="mb-6 block text-base lg:hidden" />
-      <PageHeader eyebrow="Inicio" title={`Hola, ${displayName(profile)}`} />
+      <header className="mb-6">
+        <Wordmark className="w-56 sm:w-64" priority />
+        <p className="mt-4 font-display text-[1.7rem] leading-tight font-semibold">Hola, {displayName(profile)} 💖</p>
+        <p className="text-sm text-graphite/60">La cuenta de nuestras juntadas.</p>
+      </header>
       <InstallHint />
 
       {/* Los recuerdos van arriba: la app no es solo una calculadora. */}

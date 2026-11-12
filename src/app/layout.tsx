@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "MAMANÍ CLUB",
   description: "La cuenta de nuestras juntadas.",
   applicationName: "MAMANÍ CLUB",
-  appleWebApp: { capable: true, title: "Mamaní", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Mamaní Club", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

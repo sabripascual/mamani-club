@@ -236,6 +236,12 @@ tests/e2e/             Playwright
   así la secuencia no avanza sin que la integrante haya recibido el mensaje y un cron
   duplicado no repite envíos. Los dispositivos dados de baja (404/410) se borran solos.
 
+- **ADR-017** Identidad de marca (Fase 6): logo e isotipo provistos por el grupo
+  (`public/brand/wordmark.png`, íconos en `public/icons/`). Colores de marca rosa
+  `#FA53BA` y lima `#EDFE73`. El rosa no alcanza contraste para texto chico sobre crema
+  (2,75:1), por eso el texto rosa usa `#C81A84` (4,9:1); el lima se usa como fondo de
+  resaltado con texto grafito (11:1). Gráficos: `#C81A84` + `#3F74AB` (validados).
+
 ## 10. Riesgos y limitaciones conocidas
 
 - Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de
