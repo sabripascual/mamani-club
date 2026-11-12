@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { REMEMBER_COOKIE, cookieOptionsFor } from "@/lib/supabase/remember";
 
-const PUBLIC_PATHS = ["/ingresar", "/registro"];
+const PUBLIC_PATHS = ["/ingresar", "/registro", "/recuperar"];
 
 /**
  * Refresca la sesión de Supabase en cada request y manda a /ingresar a quien no
@@ -15,6 +16,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: cookieOptionsFor(request.cookies.get(REMEMBER_COOKIE)?.value),
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (toSet) => {

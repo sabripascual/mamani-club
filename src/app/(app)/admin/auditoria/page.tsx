@@ -28,10 +28,12 @@ const ACTION_LABELS: Record<string, string> = {
   photo_moderated: "Moderó una foto",
   comment_deleted: "Borró su comentario",
   comment_moderated: "Moderó un comentario",
+  password_request_approved: "Aprobó un cambio de contraseña",
+  password_request_rejected: "Rechazó un cambio de contraseña",
 };
 
 const ENTITY_LABELS: Record<string, string> = {
-  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", expenses: "Juntada", payments: "Pago", photos: "Foto", photo_comments: "Comentario",
+  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", expenses: "Juntada", payments: "Pago", photos: "Foto", photo_comments: "Comentario", password_reset_requests: "Pedido de contraseña",
 };
 
 const fmt = new Intl.DateTimeFormat("es-AR", {

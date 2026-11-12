@@ -9,6 +9,7 @@ import { uploadMyAvatar } from "@/lib/images/avatar-upload";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/images/resize";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-field";
 import { Alert } from "@/components/ui/alert";
 
 export function SignUpForm() {
@@ -98,7 +99,7 @@ export function SignUpForm() {
         hint="Lo podés usar para ingresar. Minúsculas, números, punto o guion bajo."
       />
       <Field label="Email" name="email" type="email" autoComplete="email" defaultValue={v.email} error={f.email} />
-      <Field label="Contraseña" name="password" type="password" autoComplete="new-password" error={f.password} hint="Mínimo 8 caracteres" />
+      <PasswordField label="Contraseña" name="password" autoComplete="new-password" error={f.password} hint="Mínimo 8 caracteres" />
 
       <Button type="submit" disabled={busy} className="mt-2">
         {busy ? "Creando tu cuenta…" : "Pedir acceso"}

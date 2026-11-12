@@ -2,8 +2,8 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { pushConfigured, sendToMember } from "./send";
 
-/** Avisa a las admins (con notificaciones activadas) que alguien pidió acceso. */
-export async function notifyAdminsNewRequest(displayName: string) {
+/** Manda una notificación a todas las admins activas con dispositivos activados. */
+export async function notifyAdmins(payload: { title: string; body: string; url: string; tag: string }) {
   if (!pushConfigured()) return;
   const admin = createAdminClient();
   const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin").eq("status", "active");
@@ -14,12 +14,27 @@ export async function notifyAdminsNewRequest(displayName: string) {
     ids.map((id) => {
       const mine = (subs ?? []).filter((s) => s.member_id === id);
       if (mine.length === 0) return 0;
-      return sendToMember(id, {
-        title: "Nueva solicitud de acceso",
-        body: `${displayName} quiere sumarse al club. Tocá para aprobarla.`,
-        url: "/admin/solicitudes",
-        tag: "solicitudes",
-      }, mine);
+      return sendToMember(id, payload, mine);
     }),
   );
+}
+
+/** Alguien pidió acceso al club. */
+export function notifyAdminsNewRequest(displayName: string) {
+  return notifyAdmins({
+    title: "Nueva solicitud de acceso",
+    body: `${displayName} quiere sumarse al club. Tocá para aprobarla.`,
+    url: "/admin/solicitudes",
+    tag: "solicitudes",
+  });
+}
+
+/** Alguien olvidó su contraseña y pide una temporal. */
+export function notifyAdminsPasswordRequest(displayName: string) {
+  return notifyAdmins({
+    title: "Pedido de cambio de contraseña",
+    body: `${displayName} olvidó su contraseña. Tocá para generarle una temporal.`,
+    url: "/admin/solicitudes",
+    tag: "contrasenas",
+  });
 }

@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/pwa/service-worker";
 
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
+// Tipografías redondeadas, en armonía con el logo: Fredoka (títulos) y Nunito (interfaz).
+const fredoka = Fredoka({ subsets: ["latin"], variable: "--font-title", display: "swap" });
+const nunito = Nunito({ subsets: ["latin"], variable: "--font-ui", display: "swap" });
 
 export const metadata: Metadata = {
   title: "MAMANÍ CLUB",
@@ -23,7 +24,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es-AR" className={`${fraunces.variable} ${manrope.variable}`}>
+    <html lang="es-AR" className={`${fredoka.variable} ${nunito.variable}`}>
       <body>
         {children}
         <ServiceWorker />
