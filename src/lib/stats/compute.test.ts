@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  byCategory, filterDataset, financialSummary, memberStats, monthlySeries, monthsBetween, rankings, socialSummary,
+  byCategory, filterDataset, financialSummary, memberStats, monthlySeries, monthsBetween, personalSummary, rankings, socialSummary,
   type Dataset, type StatExpense, type StatShare,
 } from "./compute";
 
@@ -129,5 +129,29 @@ describe("series", () => {
     const s = socialSummary(ds, memberStats(ds));
     expect(s.busiestMonth?.tied).toBe(true);
     expect(s.topCategory?.name).toBe("Fiestas y salidas");
+  });
+});
+
+describe("personalSummary (vista Yo)", () => {
+  it("separa mi consumo de lo que adelanté y calcula mis deudas", () => {
+    // dani: participó en asado y boliche; pagó el after sin participar
+    const p = personalSummary(ds, "dani");
+    expect(p.participations).toBe(2);
+    expect(p.participationRate).toBe(0.5);
+    expect(p.consumedCents).toBe(2500000 + 2000000);
+    expect(p.avgPerJuntadaCents).toBe(2250000);
+    expect(p.advancedCents).toBe(3000000);
+    expect(p.timesPaid).toBe(1);
+    expect(p.advancedForOthersCents).toBe(3000000); // caro y ana en el after
+    expect(p.owedToMeCents).toBe(3000000);
+    expect(p.iOweCents).toBe(2500000 + 2000000);
+    expect(p.byCategory.map((c) => c.name)).toEqual(["Comida", "Fiestas y salidas"]);
+    expect(p.topJuntadas[0].id).toBe("asado");
+  });
+  it("sin participaciones: todo en cero, sin inventar", () => {
+    const p = personalSummary({ ...ds, expenses: [], shares: [] }, "dani");
+    expect(p.participations).toBe(0);
+    expect(p.avgPerMonthCents).toBe(0);
+    expect(p.topJuntadas).toEqual([]);
   });
 });

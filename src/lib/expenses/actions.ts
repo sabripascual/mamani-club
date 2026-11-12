@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { notifyAddedToExpense } from "@/lib/push/expense-alerts";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseMoney } from "@/lib/money/format";
@@ -89,6 +91,15 @@ async function save(mode: "create" | "update", expenseId: string | null, formDat
   };
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  // Para avisar solo a las participantes NUEVAS al editar.
+  const before = new Set<string>();
+  if (mode === "update" && expenseId) {
+    const { data: prev } = await supabase.from("expense_shares").select("member_id").eq("expense_id", expenseId).eq("is_participant", true);
+    for (const r of prev ?? []) before.add(r.member_id as string);
+  }
   let id = expenseId;
   if (mode === "create") {
     const { data, error } = await supabase.rpc("create_expense", common);
@@ -98,6 +109,10 @@ async function save(mode: "create" | "update", expenseId: string | null, formDat
     const { error } = await supabase.rpc("update_expense", { ...common, p_expense_id: expenseId, p_reason: d.reason });
     if (error) return { error: error.message };
   }
+  const participants = customShares ? customShares.map((c) => c.member_id) : d.participants;
+  const added = participants.filter((m) => !before.has(m));
+  if (id && user && added.length) after(() => notifyAddedToExpense(id!, added, user.id).catch(() => {}));
+
   revalidatePath("/", "layout");
   redirect(`/gastos/${id}`);
 }

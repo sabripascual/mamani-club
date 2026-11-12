@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireActiveMember } from "@/lib/auth/session";
 import { BottomNav, SideNav } from "@/components/nav/app-nav";
 import { pendingRequestsCount } from "@/lib/admin/pending";
+import { CelebrationHost } from "@/components/payment-celebration";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </main>
       <BottomNav pendingRequests={pending} />
+      <CelebrationHost />
     </div>
   );
 }

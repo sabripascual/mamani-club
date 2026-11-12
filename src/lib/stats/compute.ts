@@ -291,3 +291,65 @@ export function socialSummary(ds: Dataset, stats: MemberStat[]) {
 }
 
 export { pct };
+
+/**
+ * Análisis personal: lo mismo que el dashboard del grupo, pero con mis números.
+ * Consumo = mis partes; adelantado = lo que pagué; nunca se mezclan.
+ */
+export function personalSummary(ds: Dataset, memberId: string, period?: { from?: string; to?: string }) {
+  const exp = new Map(ds.expenses.map((e) => [e.id, e]));
+  const myShares = ds.shares.filter((s) => s.member_id === memberId && s.is_participant && exp.has(s.expense_id));
+  const participated = new Set(myShares.map((s) => s.expense_id));
+  const paid = ds.expenses.filter((e) => e.paid_by === memberId);
+
+  let consumed = 0;
+  const byCat = new Map<string, number>();
+  const byMonth = new Map<string, number>();
+  const perExpense: { id: string; title: string; occurred_on: string; category_id: string; myCents: number }[] = [];
+  for (const s of myShares) {
+    const e = exp.get(s.expense_id)!;
+    const c = toBase(s.amount_cents, e.fx_rate);
+    consumed += c;
+    byCat.set(e.category_id, (byCat.get(e.category_id) ?? 0) + c);
+    const k = e.occurred_on.slice(0, 7);
+    byMonth.set(k, (byMonth.get(k) ?? 0) + c);
+    perExpense.push({ id: e.id, title: e.title, occurred_on: e.occurred_on, category_id: e.category_id, myCents: c });
+  }
+
+  let iOwe = 0;
+  let owedToMe = 0;
+  let advancedForOthers = 0;
+  for (const s of ds.shares) {
+    const e = exp.get(s.expense_id);
+    if (!e || s.is_payer) continue;
+    if (s.member_id === memberId && s.outstanding_cents > 0) iOwe += toBase(s.outstanding_cents, e.fx_rate);
+    if (e.paid_by === memberId) {
+      advancedForOthers += toBase(s.amount_cents, e.fx_rate);
+      if (s.outstanding_cents > 0) owedToMe += toBase(s.outstanding_cents, e.fx_rate);
+    }
+  }
+
+  const dates = [...participated].map((id) => exp.get(id)!.occurred_on).sort();
+  const from = period?.from ?? dates[0];
+  const to = period?.to ?? dates[dates.length - 1];
+  const months = participated.size && from && to ? monthsBetween(from, to) : 0;
+  const names = new Map(ds.categories.map((c) => [c.id, c.name]));
+
+  return {
+    participations: participated.size,
+    totalExpenses: ds.expenses.length,
+    participationRate: ds.expenses.length ? participated.size / ds.expenses.length : 0,
+    consumedCents: consumed,
+    avgPerJuntadaCents: participated.size ? Math.round(consumed / participated.size) : 0,
+    monthsInPeriod: months,
+    avgPerMonthCents: months ? Math.round(consumed / months) : 0,
+    advancedCents: paid.reduce((a, e) => a + e.base_amount_cents, 0),
+    timesPaid: paid.length,
+    advancedForOthersCents: advancedForOthers,
+    iOweCents: iOwe,
+    owedToMeCents: owedToMe,
+    byCategory: [...byCat].map(([id, cents]) => ({ id, name: names.get(id) ?? "Sin categoría", totalCents: cents })).sort((a, b) => b.totalCents - a.totalCents),
+    byMonth,
+    topJuntadas: perExpense.sort((a, b) => b.myCents - a.myCents).slice(0, 5),
+  };
+}

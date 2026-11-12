@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Check, Loader2, Trash2, Undo2 } from "lucide-react";
 import { markSharePaid, voidExpense, voidPayment } from "@/lib/expenses/actions";
 import { cn } from "@/lib/utils";
+import { celebrate } from "@/components/payment-celebration";
 
 function useAction() {
   const [pending, start] = useTransition();
@@ -18,12 +19,16 @@ function useAction() {
   return { pending, error, run };
 }
 
-export function MarkPaidButton({ shareId, expenseId, label, compact }: { shareId: string; expenseId: string; label: string; compact?: boolean }) {
+export function MarkPaidButton({ shareId, expenseId, label, compact, refund }: { shareId: string; expenseId: string; label: string; compact?: boolean; refund?: boolean }) {
   const { pending, error, run } = useAction();
   return (
     <span className="flex flex-col items-end">
       <button
-        onClick={() => run(() => markSharePaid(shareId, expenseId))}
+        onClick={() => run(async () => {
+          const res = await markSharePaid(shareId, expenseId);
+          if (res.ok) celebrate(refund ? "¡Reintegro listo!" : "¡Gracias perrita!");
+          return res;
+        })}
         disabled={pending}
         className={cn(
           "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-graphite font-semibold text-cream transition active:scale-95 disabled:opacity-60",

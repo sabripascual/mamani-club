@@ -127,6 +127,7 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
                     shareId={s.share_id}
                     expenseId={e.id}
                     label={s.outstanding_cents < 0 ? "Reintegrado" : "Pagado"}
+                    refund={s.outstanding_cents < 0}
                     compact
                   />
                 )}
