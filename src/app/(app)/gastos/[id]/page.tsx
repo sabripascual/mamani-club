@@ -16,6 +16,8 @@ import { MemberAvatar, memberName } from "@/components/expenses/member-avatar";
 import { Gallery } from "@/components/photos/gallery";
 import { PhotoUploader } from "@/components/photos/photo-uploader";
 import { JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
+import { getAliases } from "@/lib/profile/aliases";
+import { CopyAlias } from "@/components/copy-alias";
 
 export const metadata: Metadata = { title: "Juntada · MAMANÍ CLUB" };
 
@@ -29,6 +31,8 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
   ]);
   if (!data) notFound();
   const { juntada: j, gastos, shares, attendees, nets, transfers, settlements, status } = data;
+  // Alias principal de quien tiene que cobrar (para copiar y transferir).
+  const aliasesBy = await getAliases([...new Set(transfers.map((t) => t.to_member))]);
 
   const me = profile.id;
   const isAdmin = profile.role === "admin";
@@ -38,6 +42,8 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
   const myNet = nets.find((n) => n.member_id === me);
   const amAttendee = attendees.includes(me);
   const activeSettlements = settlements.filter((s) => s.status === "active");
+  // Una juntada saldada no admite gastos nuevos (la base también lo impide).
+  const canAddGasto = active && status?.settlement_status !== "settled";
   const sharesBy = (gastoId: string) => shares.filter((s) => s.expense_id === gastoId && s.is_participant);
   const inSomeGasto = new Set([...shares.filter((s) => s.is_participant).map((s) => s.member_id), ...gastos.map((g) => g.paid_by)]);
 
@@ -95,11 +101,22 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                   <MemberAvatar m={memberById.get(t.from_member)} />
                   <ArrowRight className="size-4 shrink-0 text-graphite/35" />
                   <MemberAvatar m={memberById.get(t.to_member)} />
-                  <p className="min-w-0 flex-1 text-sm">
-                    <strong>{memberName(memberById.get(t.from_member), me)}</strong> → <strong>{memberName(memberById.get(t.to_member), me)}</strong>
-                    <span className="block font-semibold tabular-nums">{formatMoney(t.amount_cents, j.currency)}</span>
-                  </p>
-                  {canMark && <SettleButton juntadaId={j.id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} />}
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p><strong>{memberName(memberById.get(t.from_member), me)}</strong> → <strong>{memberName(memberById.get(t.to_member), me)}</strong></p>
+                    <p className="font-semibold tabular-nums">{formatMoney(t.amount_cents, j.currency)}</p>
+                    {(() => {
+                      const al = aliasesBy.get(t.to_member)?.[0];
+                      return al ? (
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-graphite/65">
+                          alias <span className="truncate font-mono font-semibold text-graphite">{al.alias}</span>
+                          <CopyAlias alias={al.alias} label />
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-graphite/45">{t.to_member === me ? "Cargá tu alias en tu perfil" : "Todavía no cargó alias"}</p>
+                      );
+                    })()}
+                  </div>
+                  {canMark && <SettleButton juntadaId={j.id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} alias={aliasesBy.get(t.to_member)?.[0]?.alias} meId={me} />}
                 </li>
               );
             })}
@@ -111,13 +128,13 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
       <section className="mb-8">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-display text-xl">Gastos</h2>
-          {active && (
+          {canAddGasto ? (
             <Link href={`/gastos/${j.id}/gasto/nuevo`} className="inline-flex items-center gap-1 text-sm font-semibold text-rose-dark"><Plus className="size-4" /> Agregar gasto</Link>
-          )}
+          ) : active && <span className="text-xs text-graphite/50">Saldada: no se agregan más gastos</span>}
         </div>
         {gastos.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-rose/40 p-5 text-center text-sm text-graphite/60">
-            Todavía no hay gastos. {active && <Link href={`/gastos/${j.id}/gasto/nuevo`} className="font-semibold text-rose-dark">Cargá el primero</Link>}
+            Todavía no hay gastos. {canAddGasto && <Link href={`/gastos/${j.id}/gasto/nuevo`} className="font-semibold text-rose-dark">Cargá el primero</Link>}
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -125,7 +142,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
               const parts = sharesBy(g.id);
               const cat = catById.get(g.category_id);
               const sub = g.subcategory_id ? catById.get(g.subcategory_id) : undefined;
-              const canEdit = active && (isAdmin || g.created_by === me);
+              const mine = g.created_by === me;
               const inner = (
                 <>
                   <CategoryIcon icon={cat?.icon ?? null} index={i} size="sm" />
@@ -137,17 +154,13 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                   </span>
                   <span className="text-right">
                     <span className="block font-semibold tabular-nums">{formatMoney(g.amount_cents, g.currency, { round: true })}</span>
-                    {canEdit && <span className="text-[11px] font-semibold text-rose-dark">Editar</span>}
+                    {mine && <span className="text-[11px] font-semibold text-rose-dark">Lo cargaste vos</span>}
                   </span>
                 </>
               );
               return (
                 <li key={g.id}>
-                  {canEdit ? (
-                    <Link href={`/gastos/${j.id}/gasto/${g.id}`} className="flex items-center gap-3 rounded-2xl bg-white/60 p-3 transition hover:bg-white">{inner}</Link>
-                  ) : (
-                    <div className="flex items-center gap-3 rounded-2xl bg-white/60 p-3">{inner}</div>
-                  )}
+                  <Link href={`/gastos/${j.id}/gasto/${g.id}`} className="flex items-center gap-3 rounded-2xl bg-white/60 p-3 transition hover:bg-white">{inner}</Link>
                 </li>
               );
             })}

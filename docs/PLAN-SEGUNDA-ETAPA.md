@@ -110,7 +110,7 @@ a quien cobra, hasta saldar la cuota del mes. **Préstamos: fuera de alcance.**
 |---|---|---|---|
 | **A** | E1, E2, M1, M2, M3, M4 | No | Chico |
 | **B** | Juntadas con varios gastos, pago neto por juntada, categorías de juntada y de gasto | Sí | Grande |
-| **C** | Alias de transferencia (T1–T3) | Sí | Chico-mediano |
+| **C** | Alias de transferencia (T1–T3) — ✅ alias en perfil y en “Cómo saldamos” (sin elección por gasto: con pago neto, se usa el principal de quien cobra) | Sí | Chico-mediano |
 | **D** | Calendario, eventos, ubicación, convertir en juntada, recordatorios (C1–C5) | Sí | Grande |
 | **E** | Cumpleaños y feriados (B1–B5, C6) | Sí | Mediano |
 | **F** | Panel de notificaciones (N1–N3) | Sí | Mediano |

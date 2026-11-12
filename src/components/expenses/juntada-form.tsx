@@ -103,7 +103,7 @@ export function JuntadaForm({
               </button>
               {withGasto && (
                 <div className="mt-5">
-                  <GastoFields prefix="g_" categories={gastoCategories} members={members} meId={meId} defaultParticipants={attendees} errors={errors} compact />
+                  <GastoFields prefix="g_" categories={gastoCategories} members={members} meId={meId} defaultParticipants={attendees} errors={errors} />
                 </div>
               )}
             </section>

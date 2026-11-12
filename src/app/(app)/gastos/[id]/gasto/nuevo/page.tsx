@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCategories, getJuntada, getMembers } from "@/lib/expenses/queries";
@@ -16,6 +16,7 @@ export default async function NewGastoPage({ params }: { params: Promise<{ id: s
   const { profile } = await requireActiveMember();
   const [data, { tree }, { members }] = await Promise.all([getJuntada(id), getCategories(), getMembers()]);
   if (!data || data.juntada.status !== "active") notFound();
+  if (data.status?.settlement_status === "settled") redirect(`/gastos/${id}?aviso=${encodeURIComponent("La juntada ya está saldada: no se pueden agregar más gastos.")}`);
   return (
     <>
       <Link href={`/gastos/${id}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite"><ArrowLeft className="size-4" /> {data.juntada.title}</Link>

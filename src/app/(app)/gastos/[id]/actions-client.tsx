@@ -20,14 +20,14 @@ function useAction() {
 }
 
 /** "Pagado": registra la transferencia sugerida exacta y festeja. */
-export function SettleButton({ juntadaId, from, to, amountCents, alias }: { juntadaId: string; from: string; to: string; amountCents: number; alias?: string }) {
+export function SettleButton({ juntadaId, from, to, amountCents, alias, meId }: { juntadaId: string; from: string; to: string; amountCents: number; alias?: string; meId: string }) {
   const { pending, error, run } = useAction();
   return (
     <span className="flex flex-col items-end">
       <button
         onClick={() => run(async () => {
           const res = await settleTransfer(juntadaId, from, to, amountCents, alias);
-          if (res.ok) celebrate();
+          if (res.ok) celebrate(meId === to ? "¡Te pagaron, perrita!" : "¡Gracias perrita!");
           return res;
         })}
         disabled={pending}

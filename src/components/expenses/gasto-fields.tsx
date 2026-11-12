@@ -26,7 +26,7 @@ export type GastoInitial = {
  * (primer gasto) sin chocar nombres. Las participantes arrancan con las asistentes.
  */
 export function GastoFields({
-  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {}, compact,
+  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {},
 }: {
   prefix?: string;
   categories: CategoryTree;
@@ -35,7 +35,6 @@ export function GastoFields({
   defaultParticipants?: string[];
   initial?: GastoInitial;
   errors?: Partial<Record<string, string>>;
-  compact?: boolean;
 }) {
   const n = (k: string) => `${prefix}${k}`;
   const f = (k: string) => errors[n(k)];
@@ -57,6 +56,7 @@ export function GastoFields({
   );
   const amountCents = parseMoney(amount);
   const selectedCategory = categories.find((c) => c.id === categoryId);
+  const selectedSub = selectedCategory?.children.find((c) => c.id === subcategoryId);
   const preview = amountCents ? equalSplit(amountCents, participants) : new Map<string, number>();
   const customSum = participants.reduce((acc, id) => acc + (custom[id]?.trim() === "0" ? 0 : (parseMoney(custom[id] ?? "") ?? 0)), 0);
   const remaining = (amountCents ?? 0) - customSum;
@@ -75,24 +75,11 @@ export function GastoFields({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-3 sm:grid-cols-2">
-        <Field label={compact ? "¿Qué se compró?" : "¿Qué se compró?"} name={n("title")} placeholder="Ej: Carne, Bebidas, Uber" defaultValue={initial?.title} error={f("title")} maxLength={80} />
-        <Field
-          label="Importe"
-          name={n("amount")}
-          inputMode="decimal"
-          placeholder="120.000"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          error={f("amount")}
-          hint={amountCents ? formatMoney(amountCents) : "En pesos"}
-          className="min-w-0"
-        />
-      </div>
-
       <fieldset>
-        <legend className="mb-2 text-sm font-semibold text-graphite/80">Categoría del gasto</legend>
+        <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Qué se compró?</legend>
         <input type="hidden" name={n("category_id")} value={categoryId} />
+        {/* El nombre del gasto es la subcategoría elegida (o la categoría si no tiene). */}
+        <input type="hidden" name={n("title")} value={selectedSub?.name ?? (selectedCategory && selectedCategory.children.length === 0 ? selectedCategory.name : "")} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {categories.map((c, i) => (
             <button type="button" key={c.id} onClick={() => { setCategoryId(c.id); setSubcategoryId(""); }} aria-pressed={categoryId === c.id}
@@ -105,21 +92,36 @@ export function GastoFields({
         </div>
         {f("category_id") && <p className="mt-1.5 text-sm text-rose-dark">{f("category_id")}</p>}
         {selectedCategory && selectedCategory.children.length > 0 && (
-          <div className="mt-3">
+          <div className="mt-3 rounded-2xl bg-white/50 p-3 ring-1 ring-graphite/5">
             <input type="hidden" name={n("subcategory_id")} value={subcategoryId} />
-            <p className="mb-2 text-xs font-semibold text-graphite/55">Subcategoría (opcional)</p>
+            <p className={cn("mb-2 text-sm font-semibold", !subcategoryId ? "text-rose-dark" : "text-graphite/70")}>
+              {subcategoryId ? `${selectedCategory.name} ›` : `Elegí qué fue de ${selectedCategory.name.toLowerCase()}`}
+            </p>
             <div className="flex flex-wrap gap-2">
-              {selectedCategory.children.map((s) => (
-                <button type="button" key={s.id} onClick={() => setSubcategoryId(subcategoryId === s.id ? "" : s.id)} aria-pressed={subcategoryId === s.id}
-                  className={cn("h-9 rounded-full px-3.5 text-sm font-semibold transition",
-                    subcategoryId === s.id ? "bg-graphite text-cream" : "bg-white/70 text-graphite/70 ring-1 ring-graphite/10")}>
-                  {s.name}
+              {selectedCategory.children.map((sc) => (
+                <button type="button" key={sc.id} onClick={() => setSubcategoryId(sc.id)} aria-pressed={subcategoryId === sc.id}
+                  className={cn("h-10 rounded-full px-4 text-sm font-semibold transition",
+                    subcategoryId === sc.id ? "bg-graphite text-cream" : "bg-white text-graphite/75 ring-1 ring-graphite/10")}>
+                  {sc.name}
                 </button>
               ))}
             </div>
+            {(f("subcategory_id") || f("title")) && <p className="mt-2 text-sm text-rose-dark">{f("subcategory_id") ?? "Elegí la subcategoría"}</p>}
           </div>
         )}
       </fieldset>
+
+      <Field
+        label="Importe"
+        name={n("amount")}
+        inputMode="decimal"
+        placeholder="120.000"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        error={f("amount")}
+        hint={amountCents ? formatMoney(amountCents) : "En pesos"}
+        className="max-w-xs"
+      />
 
       <fieldset>
         <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Quién pagó este gasto?</legend>
@@ -205,13 +207,11 @@ export function GastoFields({
         {f("shares") && <p className="mt-1.5 text-sm text-rose-dark">{f("shares")}</p>}
       </fieldset>
 
-      {!compact && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={n("description")} className="text-sm font-semibold text-graphite/80">Nota <span className="font-normal text-graphite/50">(opcional)</span></label>
-          <textarea id={n("description")} name={n("description")} rows={2} maxLength={500} defaultValue={initial?.description ?? ""}
+      <div className="flex flex-col gap-1.5">
+          <label htmlFor={n("description")} className="text-sm font-semibold text-graphite/80">Detalle <span className="font-normal text-graphite/50">(opcional)</span></label>
+          <textarea id={n("description")} name={n("description")} rows={2} maxLength={500} defaultValue={initial?.description ?? ""} placeholder="Ej: 3 kg de vacío y chorizos"
             className="rounded-2xl border border-graphite/10 bg-white/70 px-4 py-3 text-base outline-none focus:border-rose focus:bg-white focus:ring-4 focus:ring-rose/15" />
         </div>
-      )}
     </div>
   );
 }

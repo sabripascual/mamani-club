@@ -87,6 +87,8 @@ export function SignUpForm() {
         <Field label="Nombre" name="first_name" autoComplete="given-name" defaultValue={v.first_name} error={f.first_name} />
         <Field label="Apellido" name="last_name" autoComplete="family-name" defaultValue={v.last_name} error={f.last_name} />
       </div>
+      <Field label="Fecha de nacimiento" name="birth_date" type="date" max={new Date().toISOString().slice(0, 10)} defaultValue={v.birth_date} error={f.birth_date}
+        hint="Para saludarte en tu cumple 🎂" className="max-w-xs" />
       <Field label="Apodo" name="nickname" placeholder="Cómo te dicen en el grupo" defaultValue={v.nickname} error={f.nickname} hint="Opcional" />
       <Field
         label="Username"

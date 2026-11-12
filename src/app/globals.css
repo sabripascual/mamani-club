@@ -39,7 +39,7 @@ body {
 
 /* Celebración al registrar un pago */
 @keyframes mc-pop { 0% { transform: scale(0.4); opacity: 0 } 55% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
-@keyframes mc-fade { 0%, 75% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes mc-fade { 0%, 85% { opacity: 1 } 100% { opacity: 0 } }
 @keyframes mc-draw { from { stroke-dashoffset: 48 } to { stroke-dashoffset: 0 } }
 @keyframes mc-confetti { from { transform: translate(0, 0) rotate(0) scale(1); opacity: 1 } to { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.6); opacity: 0 } }
 @media (prefers-reduced-motion: reduce) {

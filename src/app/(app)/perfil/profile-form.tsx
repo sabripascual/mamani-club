@@ -19,6 +19,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <Field label="Apellido" name="last_name" defaultValue={profile.last_name} error={state.fields?.last_name} />
       </div>
       <Field label="Apodo" name="nickname" defaultValue={profile.nickname ?? ""} error={state.fields?.nickname} hint="Opcional" />
+      <Field label="Fecha de nacimiento" name="birth_date" type="date" max={new Date().toISOString().slice(0, 10)} defaultValue={profile.birth_date ?? ""}
+        error={state.fields?.birth_date} hint="Mostramos el día, el mes y tu edad. Se usa para el calendario y los saludos." className="max-w-xs" />
       <Button type="submit" variant="secondary" disabled={pending}>
         {pending ? "Guardando…" : "Guardar"}
       </Button>
