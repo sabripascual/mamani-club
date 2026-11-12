@@ -14,8 +14,6 @@ Repositorio vacío (sin commits). Se define el stack desde cero.
 | **Vercel** | Hobby | Hosting Next.js, HTTPS, funciones serverless, 1 cron diario | Uso no comercial (grupo privado: OK). Cron máx. 1 vez/día. |
 | **Supabase** | Free | Postgres, Auth, Storage, RLS, funciones SQL (RPC) | 500 MB de base, **1 GB de archivos**, 5 GB de egress/mes, **pausa tras 7 días sin actividad** |
 | **GitHub** | Free | Repo, CI con GitHub Actions | 2.000 min/mes de Actions en repos privados |
-| **Web Push (VAPID)** | Estándar abierto | Notificaciones push PWA | Gratis; en iOS solo con la app instalada (iOS 16.4+) |
-| **SMTP (Gmail con contraseña de aplicación)** | Gratis | Emails de recuperación de contraseña | ~500 emails/día |
 
 ### Cómo esquivamos los límites
 
@@ -29,9 +27,10 @@ Repositorio vacío (sin commits). Se define el stack desde cero.
   Las URLs firmadas se cachean en el cliente mientras siguen vigentes.
 - **Pausa por inactividad.** Un cron diario de Vercel llama a un endpoint que hace una
   consulta liviana a la base, y así el proyecto nunca llega a 7 días sin actividad.
-- **Emails.** El SMTP por defecto de Supabase solo envía a direcciones del equipo del
-  proyecto. Como la aprobación del admin ya es la barrera de acceso, la **confirmación de
-  email queda desactivada** y se configura Gmail SMTP solo para "olvidé mi contraseña".
+- **Sin emails.** La app no envía correos. La confirmación de email de Supabase queda
+  desactivada (la aprobación del admin es la barrera de acceso). Si alguien olvida su
+  contraseña, un admin le genera una **contraseña temporal** desde el panel (acción en el
+  servidor con la `service_role`, auditada) y la integrante la cambia al ingresar.
 
 ## 3. Stack
 
@@ -47,7 +46,7 @@ Repositorio vacío (sin commits). Se define el stack desde cero.
 | Validación | **Zod** | Esquemas compartidos entre formulario y servidor |
 | Formularios | **React Hook Form** | |
 | Datos | **Supabase** (`@supabase/ssr`) | Auth + Postgres + Storage en un solo servicio gratuito |
-| PWA | **Serwist** (sucesor de next-pwa) | Service worker y manifest con soporte de App Router |
+| PWA | **Serwist** (sucesor de next-pwa) | Service worker, manifest e instalación (sin push) |
 | Exportación del Wrapped | **html-to-image** (PNG por slide) + **jsPDF** | Se genera en el cliente, sin costo de servidor |
 | Tests unitarios | **Vitest** | Lógica financiera pura (división, saldos, simplificación) |
 | Tests de base | **pgTAP** con Supabase CLI local (Docker) | RLS, triggers y funciones transaccionales |
@@ -107,9 +106,6 @@ photo_comments      id, photo_id, author_id, body, created_at, deleted_at, delet
 audit_log           id, actor_id, occurred_at, entity, entity_id, action, old_values jsonb,
                     new_values jsonb, reason     → solo INSERT (vía trigger)
 
-notifications       id, recipient_id, type, payload jsonb, read_at, created_at
-notification_prefs  member_id, type, push_enabled, in_app_enabled
-push_subscriptions  id, member_id, endpoint, keys jsonb, user_agent, created_at
 ```
 
 ### Vistas calculadas
@@ -163,7 +159,7 @@ app/
   (app)/inicio, gastos, gastos/[id], gastos/nuevo, rankings, perfil, perfil/[username],
         recuerdos/[expenseId], wrapped/[year]
   (app)/admin/solicitudes, integrantes, categorias, auditoria, configuracion
-  api/cron/keepalive, api/push/...
+  api/cron/keepalive
 components/ui/      primitivas (botón, tarjeta, avatar, sheet…)
 components/…        componentes de dominio (ExpenseCard, BalanceList, PhotoCarousel…)
 lib/money/          división, formateo y simplificación (puras y testeadas)
@@ -183,7 +179,7 @@ y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto re
 | 1 | Next + Supabase, auth, registro → pending, aprobación, roles, RLS base, auditoría base, diseño, navegación y PWA instalable | Casos 1–5, 8, 38–42 |
 | 2 | Gastos, categorías, división, multidivisa manual, pagos, balances, simplificación, perfil financiero | Casos 6, 7, 9–18, 22 |
 | 3 | Dashboard, gráficos, rankings, filtros | Casos 19–21 |
-| 4 | Álbum, subida comprimida, carrusel "Así la pasamos", likes, comentarios, moderación, notificaciones | Casos 23–32 |
+| 4 | Álbum, subida comprimida, carrusel "Así la pasamos", likes, comentarios, moderación | Casos 23–32 |
 | 5 | Wrapped, exportación, hardening de seguridad, QA responsive y PWA | Casos 33–37 + regresión completa |
 
 ## 9. Registro de decisiones (ADR)
@@ -194,8 +190,11 @@ y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto re
 - **ADR-003** Importes en centavos (`bigint`).
 - **ADR-004** Compresión de imágenes en el cliente; almacenamiento abstraído para poder
   migrar a R2.
-- **ADR-005** Confirmación de email desactivada; la aprobación del admin es el control de
-  acceso.
+- **ADR-005** Sin envío de emails: confirmación desactivada, la aprobación del admin es el
+  control de acceso y la recuperación de contraseña la hace un admin (contraseña temporal).
+- **ADR-007** Notificaciones (in-app, push y email) **fuera de alcance**. Las secciones 14
+  y "notificaciones" de las fases 4 del prompt maestro quedan descartadas. Si en el futuro
+  se retoman, se agregan como tablas nuevas sin tocar el modelo existente.
 - **ADR-006** Zona horaria `America/Argentina/Buenos_Aires`: `occurred_on` es `date` (sin
   hora); los timestamps son `timestamptz` y se muestran en hora de Buenos Aires.
 
