@@ -17,8 +17,13 @@ export async function uploadMyAvatar(file: File) {
   if (error) throw error;
 
   const { data: old } = await supabase.from("profiles").select("avatar_path").eq("id", user.id).single();
-  const { error: updateError } = await supabase.from("profiles").update({ avatar_path: path }).eq("id", user.id);
-  if (updateError) throw updateError;
+  const { data: updated, error: updateError } = await supabase
+    .from("profiles").update({ avatar_path: path }).eq("id", user.id).select("id");
+  // Si una regla bloquea el cambio, Supabase no da error: devuelve 0 filas. Lo tratamos como falla.
+  if (updateError || !updated?.length) {
+    await supabase.storage.from("avatars").remove([path]);
+    throw updateError ?? new Error("No se pudo guardar la foto en el perfil");
+  }
   if (old?.avatar_path) await supabase.storage.from("avatars").remove([old.avatar_path]);
   return path;
 }
