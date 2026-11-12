@@ -46,7 +46,7 @@ Repositorio vacío (sin commits). Se define el stack desde cero.
 | Validación | **Zod** | Esquemas compartidos entre formulario y servidor |
 | Formularios | **React Hook Form** | |
 | Datos | **Supabase** (`@supabase/ssr`) | Auth + Postgres + Storage en un solo servicio gratuito |
-| PWA | **Serwist** (sucesor de next-pwa) | Service worker, manifest e instalación (sin push) |
+| PWA | Service worker propio (`public/sw.js`) + `app/manifest.ts` | Sin dependencias; cachea solo estáticos, nunca datos privados |
 | Exportación del Wrapped | **html-to-image** (PNG por slide) + **jsPDF** | Se genera en el cliente, sin costo de servidor |
 | Tests unitarios | **Vitest** | Lógica financiera pura (división, saldos, simplificación) |
 | Tests de base | **pgTAP** con Supabase CLI local (Docker) | RLS, triggers y funciones transaccionales |
@@ -214,6 +214,10 @@ y en la Fase 2** (no en la 5), porque tiene que existir desde el primer gasto re
 - **ADR-011** Rankings temáticos por categoría: *más fiestera* = juntadas de "Fiestas y
   salidas"; *reina del tercer tiempo* = subcategoría "Tercer tiempo"; *participación
   deportiva* = "Deportes y terceros tiempos".
+
+- **ADR-012** Service worker escrito a mano en lugar de Serwist: la app no necesita modo
+  offline de datos (las cuentas siempre vienen del servidor), así que alcanza con cachear
+  estáticos y mostrar una página "sin conexión". Menos dependencias y comportamiento obvio.
 
 ## 10. Riesgos y limitaciones conocidas
 
