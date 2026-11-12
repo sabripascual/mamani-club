@@ -38,7 +38,7 @@ Repositorio vacío (sin commits). Se define el stack desde cero.
 |---|---|---|
 | Framework | **Next.js 15 (App Router) + TypeScript** | Server Components y Server Actions: la lógica sensible corre en el servidor; deploy nativo en Vercel |
 | Estilos | **Tailwind CSS** + componentes propios basados en **shadcn/ui** (Radix) | Control total de la estética editorial; accesibilidad de Radix |
-| Tipografías | **Fraunces** (títulos editoriales) + **Manrope** (interfaz) vía `next/font` | Personalidad sin perder legibilidad; sin requests externos |
+| Tipografías | **Fredoka** (títulos) + **Nunito** (interfaz) vía `next/font` | Redondeadas, en armonía con el logo; sin requests externos |
 | Iconos | **Lucide** | Iconografía lineal |
 | Animaciones | **Framer Motion** (Motion) | Microinteracciones y slides del Wrapped |
 | Gráficos | **Recharts** | Livianos, personalizables con la paleta |

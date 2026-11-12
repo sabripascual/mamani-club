@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { rememberCookie } from "@/lib/supabase/remember";
 import { after } from "next/server";
 import { notifyAdminsNewRequest } from "@/lib/push/admin-alerts";
 import { createClient } from "@/lib/supabase/server";
@@ -50,7 +52,11 @@ export async function signIn(_: FormState, formData: FormData): Promise<FormStat
     email = data as string;
   }
 
-  const supabase = await createClient();
+  const remember = formData.get("remember") === "on";
+  const flag = rememberCookie(remember);
+  (await cookies()).set(flag.name, flag.value, flag.options);
+
+  const supabase = await createClient({ remember });
   const { error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
   if (error) return { error: authErrorMessage(error.message), values: keep };
   redirect("/");

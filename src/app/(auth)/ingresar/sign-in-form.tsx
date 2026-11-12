@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { signIn, type FormState } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-field";
 import { Alert } from "@/components/ui/alert";
 
 export function SignInForm() {
@@ -20,14 +21,18 @@ export function SignInForm() {
         defaultValue={state.values?.identifier}
         error={state.fields?.identifier}
       />
-      <Field
+      <PasswordField
         label="Contraseña"
         name="password"
-        type="password"
+       
         autoComplete="current-password"
         error={state.fields?.password}
       />
-      <Button type="submit" disabled={pending} className="mt-2">
+      <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-graphite/80">
+        <input type="checkbox" name="remember" defaultChecked className="size-5 rounded accent-rose-dark" />
+        Mantener la sesión iniciada
+      </label>
+      <Button type="submit" disabled={pending} className="mt-1">
         {pending ? "Ingresando…" : "Ingresar"}
       </Button>
       <p className="text-center text-sm text-graphite/65">
@@ -36,8 +41,10 @@ export function SignInForm() {
           Pedí tu acceso
         </Link>
       </p>
-      <p className="text-center text-xs text-graphite/50">
-        ¿Te olvidaste la contraseña? Pedile a una admin que te genere una temporal.
+      <p className="text-center text-sm">
+        <Link href="/recuperar" className="font-semibold text-graphite/60 underline-offset-4 hover:text-graphite hover:underline">
+          ¿Olvidaste tu contraseña?
+        </Link>
       </p>
     </form>
   );

@@ -13,7 +13,7 @@ export function PendingRequestsBanner({ count }: { count: number }) {
         <UserPlus className="size-5" />
       </span>
       <span className="flex-1 text-sm">
-        <strong>{count === 1 ? "Hay 1 solicitud de acceso" : `Hay ${count} solicitudes de acceso`}</strong>
+        <strong>{count === 1 ? "Hay 1 solicitud pendiente" : `Hay ${count} solicitudes pendientes`}</strong>
         <span className="block text-graphite/70">Tocá para aprobar o rechazar</span>
       </span>
       <ChevronRight className="size-5" />

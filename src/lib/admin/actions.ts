@@ -69,3 +69,23 @@ export async function resetMemberPassword(memberId: string): Promise<AdminResult
   revalidatePath("/admin", "layout");
   return { ok: true, password };
 }
+
+/** Aprueba un pedido de contraseña: lo marca resuelto (auditado) y genera la temporal. */
+export async function approvePasswordRequest(requestId: string): Promise<AdminResult> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data: memberId, error } = await supabase.rpc("admin_resolve_password_request", { p_request_id: requestId, p_status: "approved" });
+  if (error) return { ok: false, error: error.message.includes("resuelta") ? "Otra admin ya resolvió este pedido." : friendly(error.message) };
+  const res = await resetMemberPassword(memberId as string);
+  if (!res.ok) return { ok: false, error: `${res.error} Podés generarla desde Integrantes.` };
+  return res;
+}
+
+export async function rejectPasswordRequest(requestId: string): Promise<AdminResult> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_resolve_password_request", { p_request_id: requestId, p_status: "rejected" });
+  if (error) return { ok: false, error: friendly(error.message) };
+  revalidatePath("/admin", "layout");
+  return { ok: true };
+}
