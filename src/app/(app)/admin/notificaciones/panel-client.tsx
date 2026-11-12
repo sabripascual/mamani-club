@@ -22,7 +22,7 @@ function useRun() {
 }
 
 export function MessagePool({ kind, messages, hint, placeholderTitle, placeholderBody }: {
-  kind: "weekly" | "birthday" | "birthday_week"; messages: Msg[]; hint: string; placeholderTitle: string; placeholderBody: string;
+  kind: "weekly" | "birthday" | "birthday_week" | "event_new"; messages: Msg[]; hint: string; placeholderTitle: string; placeholderBody: string;
 }) {
   const { pending, msg, run } = useRun();
   const [title, setTitle] = useState("");

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Pencil, Plus, Undo2 } from "lucide-react";
+import { refundAliasFor } from "@/lib/expenses/refund-alias";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCategories, getJuntada, getJuntadaTypes, getMembers } from "@/lib/expenses/queries";
 import { getAlbum } from "@/lib/photos/queries";
@@ -15,7 +16,7 @@ import { StatusChip } from "@/components/expenses/status-chip";
 import { MemberAvatar, memberName } from "@/components/expenses/member-avatar";
 import { Gallery } from "@/components/photos/gallery";
 import { PhotoUploader } from "@/components/photos/photo-uploader";
-import { JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
+import { GuestPaidButton, JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
 import { getAliases } from "@/lib/profile/aliases";
 import { CopyAlias } from "@/components/copy-alias";
 import { MapsLink } from "@/components/maps-link";
@@ -32,8 +33,13 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
   ]);
   if (!data) notFound();
   const { juntada: j, gastos, shares, attendees, nets, transfers, settlements, status } = data;
-  // Alias principal de quien tiene que cobrar (para copiar y transferir).
-  const aliasesBy = await getAliases([...new Set(transfers.map((t) => t.to_member))]);
+  // Deudas de invitadas: cada una le paga su parte a quien pagó ese gasto.
+  const gastoById = new Map(gastos.map((g) => [g.id, g]));
+  const guestDebts = shares.filter((s) => s.guest_name && gastoById.has(s.expense_id))
+    .map((s) => ({ ...s, creditor: gastoById.get(s.expense_id)!.paid_by, gasto: gastoById.get(s.expense_id)! }));
+  // Alias de quien tiene que cobrar: el que eligió al cargar su gasto, o su principal.
+  const aliasesBy = await getAliases([...new Set([...transfers.map((t) => t.to_member), ...guestDebts.map((d) => d.creditor)])]);
+  const aliasOf = (memberId: string) => refundAliasFor(gastos, memberId, aliasesBy.get(memberId)?.[0]?.alias);
 
   const me = profile.id;
   const isAdmin = profile.role === "admin";
@@ -107,18 +113,49 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                     <p><strong>{memberName(memberById.get(t.from_member), me)}</strong> → <strong>{memberName(memberById.get(t.to_member), me)}</strong></p>
                     <p className="font-semibold tabular-nums">{formatMoney(t.amount_cents, j.currency)}</p>
                     {(() => {
-                      const al = aliasesBy.get(t.to_member)?.[0];
+                      const al = aliasOf(t.to_member);
                       return al ? (
                         <p className="mt-1 flex items-center gap-1.5 text-xs text-graphite/65">
-                          alias <span className="truncate font-mono font-semibold text-graphite">{al.alias}</span>
-                          <CopyAlias alias={al.alias} label />
+                          alias <span className="truncate font-mono font-semibold text-graphite">{al}</span>
+                          <CopyAlias alias={al} label />
                         </p>
                       ) : (
                         <p className="mt-1 text-xs text-graphite/45">{t.to_member === me ? "Cargá tu alias en tu perfil" : "Todavía no cargó alias"}</p>
                       );
                     })()}
                   </div>
-                  {canMark && <SettleButton juntadaId={j.id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} alias={aliasesBy.get(t.to_member)?.[0]?.alias} meId={me} />}
+                  {canMark && <SettleButton juntadaId={j.id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} alias={aliasOf(t.to_member) ?? undefined} meId={me} />}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {/* Invitadas: cada una paga su parte a quien pagó el gasto */}
+      {active && guestDebts.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-1 font-display text-xl">Invitadas</h2>
+          <p className="mb-3 text-xs text-graphite/55">Cada invitada le paga su parte a quien pagó el gasto. Lo marcan su responsable o una admin.</p>
+          <ul className="flex flex-col gap-2">
+            {guestDebts.map((d) => {
+              const paid = !!d.guest_paid_at;
+              const canMark = isAdmin || d.member_id === me;
+              const al = aliasOf(d.creditor);
+              return (
+                <li key={d.id} className={`flex items-center gap-3 rounded-2xl p-3 ${d.member_id === me || d.creditor === me ? "bg-white ring-1 ring-rose/40" : "bg-white/55"}`}>
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-lime text-sm font-bold">{d.guest_name!.charAt(0).toUpperCase()}</span>
+                  <ArrowRight className="size-4 shrink-0 text-graphite/35" />
+                  <MemberAvatar m={memberById.get(d.creditor)} />
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p><strong>{d.guest_name}</strong> → <strong>{memberName(memberById.get(d.creditor), me)}</strong> <span aria-label={paid ? "pagó" : "debe"}>{paid ? "🤑" : "🐀"}</span></p>
+                    <p className="font-semibold tabular-nums">{formatMoney(d.amount_cents, j.currency)} <span className="font-normal text-graphite/55">· {d.gasto.title}</span></p>
+                    <p className="text-xs text-graphite/55">{paid ? "Ya pagó" : "Debe"} · invitada de {memberName(memberById.get(d.member_id), me)}</p>
+                    {!paid && al && (
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-graphite/65">alias <span className="truncate font-mono font-semibold text-graphite">{al}</span><CopyAlias alias={al} label /></p>
+                    )}
+                  </div>
+                  {canMark && <GuestPaidButton shareId={d.id} juntadaId={j.id} paid={paid} />}
                 </li>
               );
             })}
@@ -135,9 +172,9 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
         {canAddGasto && (
           <Link
             href={`/gastos/${j.id}/gasto/nuevo`}
-            className="group mb-3 flex items-center gap-4 rounded-[var(--radius-card)] bg-rose p-4 text-graphite shadow-lg shadow-rose/30 ring-4 ring-lime/70 transition hover:brightness-105 active:scale-[0.99]"
+            className="group mb-3 flex items-center gap-4 rounded-[var(--radius-card)] bg-lime p-4 text-graphite shadow-lg shadow-rose/25 ring-4 ring-rose transition hover:brightness-105 active:scale-[0.99]"
           >
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-graphite text-lime transition group-hover:rotate-90">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full border-[2.5px] border-graphite text-graphite transition group-hover:rotate-90">
               <Plus className="size-6" strokeWidth={2.5} />
             </span>
             <span className="flex-1">

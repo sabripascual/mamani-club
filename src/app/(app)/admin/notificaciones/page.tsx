@@ -10,6 +10,7 @@ export const metadata: Metadata = { title: "Notificaciones · MAMANÍ CLUB" };
 const KIND_LABEL: Record<string, string> = {
   debtor: "Deuda", creditor: "Cobro", test: "Prueba", event: "Evento", birthday: "Cumpleaños",
   birthday_week: "Cumple en 7 días", weekly: "Frase semanal", broadcast: "Envío manual",
+  event_new: "Evento nuevo", guest_debt: "Deuda de invitada",
 };
 const fmt = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "medium", timeStyle: "short" });
 
@@ -38,6 +39,12 @@ export default async function NotificationsPanel() {
       <Card className="mb-8">
         <MessagePool kind="weekly" messages={by("weekly")} hint="Cada lunes se manda una al azar entre las activas. Pausá las que no quieras repetir."
           placeholderTitle="Ej: ¡Arrancó la semana, perritas!" placeholderBody="Ej: ¿Qué hacemos el finde?" />
+      </Card>
+
+      <h2 className="mb-2 font-display text-xl">Evento nuevo</h2>
+      <Card className="mb-8">
+        <MessagePool kind="event_new" messages={by("event_new")} hint="Al crear un evento le llega a todo el grupo (menos a quien lo creó) una al azar. Usá {evento} para el nombre y {fecha} para el día y la hora."
+          placeholderTitle="Ej: Se armó la juntada reinas 🍸" placeholderBody="Ej: {evento} · {fecha}" />
       </Card>
 
       <h2 className="mb-2 font-display text-xl">Saludo del día del cumple (8:00)</h2>

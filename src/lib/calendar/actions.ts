@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { FormState } from "@/lib/expenses/actions";
 import { arToIso, type Rsvp } from "./types";
+import { notifyNewEvent } from "@/lib/push/calendar-daily";
+import { pushConfigured } from "@/lib/push/send";
 
 const schema = z.object({
   title: z.string().trim().min(1, "Ponele un nombre al evento").max(80),
@@ -38,6 +41,8 @@ export async function createEvent(_: FormState, fd: FormData): Promise<FormState
     p_location: p.data.location, p_description: p.data.description,
   });
   if (error) return { error: error.message };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user && pushConfigured()) after(() => notifyNewEvent(data as string, user.id).then(() => undefined).catch(() => {}));
   revalidatePath("/calendario");
   redirect(`/calendario/${data}`);
 }

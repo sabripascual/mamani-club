@@ -2,44 +2,37 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatMoney } from "@/lib/money/format";
 import { planNotifications, type LogEntry, type PendingDebt } from "./plan";
+import { planGuestReminders, type GuestDebt } from "./guest-plan";
 import { sendToMember } from "./send";
 
 const AR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 
-/** Corrida diaria (10:00 AR): calcula y manda las notificaciones de deudas. */
+type Planned = { kind: string; member_id: string; juntada_id: string | null; ref_id?: string; step: number; title: string; body: string; url: string; tag: string };
+
+/** Corrida diaria (10:00 AR): deudas entre integrantes y deudas de invitadas (a su responsable). */
 export async function runDailyNotifications(today = AR.format(new Date())) {
   const admin = createAdminClient();
 
-  // Deudas = transferencias pendientes de cada juntada (pago neto, estilo Tricount).
-  const [{ data: transfers }, { data: subs }, { data: log }] = await Promise.all([
+  // Deudas = transferencias pendientes de cada juntada (pago neto, estilo Tricount)
+  // + partes de invitadas sin pagar (cada invitada le paga a quien pagó su gasto).
+  const [{ data: transfers }, { data: guestDebts }, { data: subs }, { data: log }] = await Promise.all([
     admin.from("v_pending_transfers").select("juntada_id, currency, from_member, to_member, amount_cents"),
+    admin.from("v_guest_debts").select("share_id, juntada_id, currency, guest_name, responsible_id, creditor_id, amount_cents, created_at").is("guest_paid_at", null),
     admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth"),
     admin.from("notification_log").select("kind, member_id, juntada_id, sent_on").gte("sent_on", new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10)),
   ]);
-  if (!transfers || transfers.length === 0) return { planned: 0, sent: 0 };
+  if (!transfers?.length && !guestDebts?.length) return { planned: 0, sent: 0 };
 
-  const ids = [...new Set(transfers.map((t) => t.juntada_id as string))];
-  const [{ data: juntadas }, { data: members }, { data: guestShares }] = await Promise.all([
+  const ids = [...new Set([...(transfers ?? []), ...(guestDebts ?? [])].map((t) => t.juntada_id as string))];
+  const [{ data: juntadas }, { data: members }] = await Promise.all([
     admin.from("juntadas").select("id, title, created_at").in("id", ids),
-    admin.from("profiles").select("id").eq("status", "active"),
-    // Partes de invitadas en esas juntadas: se menciona en el aviso a su responsable.
-    admin.from("expense_shares").select("member_id, guest_name, expenses!inner(juntada_id, status)")
-      .not("guest_name", "is", null).in("expenses.juntada_id", ids).eq("expenses.status", "active"),
+    admin.from("profiles").select("id, first_name, nickname").eq("status", "active"),
   ]);
-  const guestsOf = new Map<string, Set<string>>(); // "juntada:integrante" → nombres de sus invitadas
-  for (const s of (guestShares ?? []) as unknown as { member_id: string; guest_name: string; expenses: { juntada_id: string } }[]) {
-    const k = `${s.expenses.juntada_id}:${s.member_id}`;
-    guestsOf.set(k, (guestsOf.get(k) ?? new Set()).add(s.guest_name));
-  }
-  const guestNote = (juntadaId: string, memberId: string) => {
-    const names = [...(guestsOf.get(`${juntadaId}:${memberId}`) ?? [])];
-    if (names.length === 0) return "";
-    return names.length === 1 ? `\nIncluye la parte de tu invitada ${names[0]}` : `\nIncluye la parte de tus invitadas ${names.join(", ")}`;
-  };
   const jById = new Map((juntadas ?? []).map((j) => [j.id as string, j]));
   const active = new Set((members ?? []).map((m) => m.id as string));
+  const nameOf = new Map((members ?? []).map((m) => [m.id as string, (m.nickname as string | null) || (m.first_name as string)]));
 
-  const debts: PendingDebt[] = transfers
+  const debts: PendingDebt[] = (transfers ?? [])
     .filter((t) => jById.has(t.juntada_id))
     .map((t) => ({
       expense_id: t.juntada_id,
@@ -59,17 +52,27 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
   }
   const debtorDebts = [...merged.values()];
 
-  const subsByMember = new Map<string, typeof subs>();
+  const subsByMember = new Map<string, NonNullable<typeof subs>>();
   for (const s of subs ?? []) subsByMember.set(s.member_id, [...(subsByMember.get(s.member_id) ?? []), s]);
+  const canNotify = (m: string) => active.has(m) && (subsByMember.get(m)?.length ?? 0) > 0;
+  const money = (c: number, cur: string) => formatMoney(c, cur, { round: true });
 
   const logEntries = (log ?? []).map((l) => ({ kind: l.kind, member_id: l.member_id, expense_id: l.juntada_id, sent_on: l.sent_on })) as LogEntry[];
   // Deudoras: una por juntada (montos sumados). Quien cobra: resumen con todas las transferencias.
-  const plan = [
-    ...planNotifications(today, debtorDebts, logEntries, (m) => active.has(m) && (subsByMember.get(m)?.length ?? 0) > 0, (c, cur) => formatMoney(c, cur, { round: true }))
-      .filter((p) => p.kind === "debtor")
-      .map((p) => ({ ...p, body: p.body + guestNote(p.expense_id ?? "", p.member_id) })),
-    ...planNotifications(today, debts, logEntries, (m) => active.has(m) && (subsByMember.get(m)?.length ?? 0) > 0, (c, cur) => formatMoney(c, cur, { round: true }))
-      .filter((p) => p.kind === "creditor"),
+  const toPlanned = (p: ReturnType<typeof planNotifications>[number]): Planned => ({ ...p, juntada_id: p.expense_id });
+  const guestPlan: Planned[] = planGuestReminders(
+    today,
+    (guestDebts ?? []).filter((g) => jById.has(g.juntada_id)).map((g): GuestDebt => ({
+      share_id: g.share_id, juntada_id: g.juntada_id, juntada_title: jById.get(g.juntada_id)!.title, guest_name: g.guest_name,
+      responsible_id: g.responsible_id, creditor_name: g.creditor_id === g.responsible_id ? "vos" : (nameOf.get(g.creditor_id) ?? "quien pagó"),
+      amount_cents: Number(g.amount_cents), currency: g.currency, created_on: AR.format(new Date(g.created_at)),
+    })),
+    canNotify, money,
+  ).map((r) => ({ ...r, step: 1 }));
+  const plan: Planned[] = [
+    ...planNotifications(today, debtorDebts, logEntries, canNotify, money).filter((p) => p.kind === "debtor").map(toPlanned),
+    ...planNotifications(today, debts, logEntries, canNotify, money).filter((p) => p.kind === "creditor").map(toPlanned),
+    ...guestPlan,
   ];
 
   let sent = 0;
@@ -77,7 +80,7 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
     // 1) Reservar el envío (índice único por día): si el cron corre dos veces, no duplica.
     const { data: row, error } = await admin
       .from("notification_log")
-      .insert({ kind: p.kind, member_id: p.member_id, juntada_id: p.expense_id, step: p.step, sent_on: today, title: p.title, body: p.body })
+      .insert({ kind: p.kind, member_id: p.member_id, juntada_id: p.juntada_id, ref_id: p.ref_id ?? null, step: p.step, sent_on: today, title: p.title, body: p.body })
       .select("id")
       .single();
     if (error || !row) continue;

@@ -7,6 +7,7 @@ import { getCategories, getGasto, getMembers } from "@/lib/expenses/queries";
 import { updateGasto } from "@/lib/expenses/actions";
 import { PageHeader } from "@/components/ui/page-header";
 import { GastoForm } from "@/components/expenses/gasto-form";
+import { getAliases } from "@/lib/profile/aliases";
 import { VoidGastoButton } from "../../../actions-client";
 
 export const metadata: Metadata = { title: "Editar gasto · MAMANÍ CLUB" };
@@ -15,7 +16,7 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
   const { id, gastoId } = await params;
   if (!/^[0-9a-f-]{36}$/.test(gastoId)) notFound();
   const { profile } = await requireActiveMember();
-  const [data, { tree }, { members }] = await Promise.all([getGasto(gastoId), getCategories(), getMembers()]);
+  const [data, { tree }, { members }, myAliases] = await Promise.all([getGasto(gastoId), getCategories(), getMembers(), getAliases([profile.id])]);
   if (!data || data.gasto.juntada_id !== id) notFound();
   const { gasto: g, shares } = data;
   // La base también lo valida: quien lo cargó, la responsable de una invitada o una admin.
@@ -31,9 +32,10 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
         members={members}
         meId={profile.id}
         attendees={[]}
+        myAliases={myAliases.get(profile.id) ?? []}
         initial={{
           title: g.title, category_id: g.category_id, subcategory_id: g.subcategory_id, description: g.description,
-          amount_cents: g.amount_cents, paid_by: g.paid_by, split_type: g.split_type,
+          amount_cents: g.amount_cents, paid_by: g.paid_by, split_type: g.split_type, refund_alias: g.refund_alias,
           shares: shares.filter((s) => s.is_participant && !s.guest_name).map((s) => ({ member_id: s.member_id, amount_cents: s.amount_cents })),
           guests: shares.filter((s) => s.guest_name).map((s) => ({ name: s.guest_name!, responsible_id: s.member_id, amount_cents: s.amount_cents })),
         }}

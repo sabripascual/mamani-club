@@ -3,11 +3,12 @@
  *  - Cumpleaños: 7 días antes (a todas menos la cumpleañera) y el mismo día 8:00.
  *  - Frase semanal: los lunes 8:00, una al azar entre las activas.
  *  - Eventos: la víspera 10:00 y el mismo día 8:00, a quienes dijeron Voy o Tal vez.
+ *  - Evento nuevo: al crearlo, a todas menos a quien lo creó, con una frase al azar.
  */
 
 export type Person = { id: string; name: string; birth_date: string | null };
 export type Msg = { id: string; title: string; body: string };
-export type Planned = { kind: "birthday" | "birthday_week" | "weekly" | "event" | "broadcast"; member_id: string; ref_id: string; title: string; body: string; url: string; tag: string };
+export type Planned = { kind: "birthday" | "birthday_week" | "weekly" | "event" | "event_new" | "broadcast"; member_id: string; ref_id: string; title: string; body: string; url: string; tag: string };
 
 export function addDays(day: string, n: number) {
   const d = new Date(`${day}T12:00:00Z`);
@@ -75,4 +76,16 @@ export function planEventReminders(today: string, events: EventInfo[], mode: "ev
     for (const m of e.attendees) out.push({ kind: "event", member_id: m, ref_id: e.id, title, body, url: `/calendario/${e.id}`, tag: `evento-${e.id}` });
   }
   return out;
+}
+
+/** Evento nuevo: una frase al azar del panel ({evento} y {fecha} se completan). */
+export function planNewEvent(
+  event: { id: string; title: string; when: string }, recipients: string[], creatorId: string, pick: (msgs: Msg[]) => Msg | undefined, pool: Msg[],
+): Planned[] {
+  const m = pick(pool) ?? { id: "", title: "¡Hay plan nuevo!", body: "{evento} · {fecha}" };
+  const fillEvent = (s: string) => s.replaceAll("{evento}", event.title).replaceAll("{fecha}", event.when);
+  return recipients.filter((r) => r !== creatorId).map((r) => ({
+    kind: "event_new" as const, member_id: r, ref_id: event.id, title: fillEvent(m.title), body: fillEvent(m.body),
+    url: `/calendario/${event.id}`, tag: `evento-nuevo-${event.id}`,
+  }));
 }

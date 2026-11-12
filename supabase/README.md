@@ -18,7 +18,8 @@
 | 0007_juntadas_multigasto.sql | Juntadas con varios gastos, asistentes, transferencias netas, tipos de juntada | ✅ |
 | 0008_perfil_alias_y_reglas.sql | Fecha de nacimiento, alias (hasta 5), juntada saldada sin gastos nuevos, subcategoría obligatoria | ✅ |
 | 0009_calendario_y_notificaciones.sql | Eventos y asistencia, feriados, ubicación, borrar categorías sin uso, mensajes de notificación | ✅ |
-| 0010_invitadas.sql | Invitadas en los gastos (nombre + responsable del club) | ⏳ |
+| 0010_invitadas.sql | Invitadas en los gastos (nombre + responsable del club) | ✅ |
+| 0011_invitadas_pagan_y_avisos.sql | Las invitadas pagan lo suyo, alias de devolución por gasto, aviso de evento nuevo | ⏳ |
 
 ## Correr las pruebas localmente
 

@@ -66,6 +66,20 @@ export async function addAlias(alias: string, label: string): Promise<AliasResul
   return { ok: true };
 }
 
+export async function updateAlias(id: string, alias: string, label: string): Promise<AliasResult> {
+  const a = alias.trim().toLowerCase();
+  if (!ALIAS_RE.test(a)) return { ok: false, error: "El alias tiene que tener entre 6 y 20 caracteres: letras, números, punto o guion." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Tu sesión expiró" };
+  const { data, error } = await supabase.from("member_aliases").update({ alias: a, label: label.trim() || null })
+    .eq("id", id).eq("member_id", user.id).select("id");
+  if (error) return { ok: false, error: error.message.includes("duplicate") ? "Ya tenés ese alias." : "No se pudo guardar el alias." };
+  if (!data?.length) return { ok: false, error: "No encontramos ese alias." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function removeAlias(id: string): Promise<AliasResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

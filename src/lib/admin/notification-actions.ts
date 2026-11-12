@@ -7,7 +7,7 @@ import { pushConfigured } from "@/lib/push/send";
 import { sendBroadcast } from "@/lib/push/calendar-daily";
 
 export type NResult = { ok: boolean; error?: string; sent?: number };
-type Kind = "weekly" | "birthday" | "birthday_week";
+type Kind = "weekly" | "birthday" | "birthday_week" | "event_new";
 
 export async function addMessage(kind: Kind, title: string, body: string): Promise<NResult> {
   const { profile } = await requireAdmin();

@@ -13,14 +13,15 @@ async function nameOf(admin: ReturnType<typeof createAdminClient>, id: string) {
 /**
  * "¡Poniendo estaba la gansa!": avisa a cada participante de un gasto que se lo
  * cargaron (con su parte y, si corresponde, lo que debe en la juntada). No le llega
- * a quien lo cargó. A la responsable de una invitada le avisa también la parte de ella.
+ * a quien lo cargó. A la responsable de una invitada le avisa que su invitada debe
+ * su parte a quien pagó el gasto (la invitada paga lo suyo).
  */
 export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memberIds: string[], actorId: string) {
   const targets = [...new Set(memberIds)].filter((m) => m !== actorId);
   if (!pushConfigured() || targets.length === 0) return;
   const admin = createAdminClient();
   const [{ data: g }, { data: j }, { data: shares }, { data: transfers }, { data: subs }, actor] = await Promise.all([
-    admin.from("expenses").select("title, amount_cents, currency").eq("id", gastoId).single(),
+    admin.from("expenses").select("title, amount_cents, currency, paid_by").eq("id", gastoId).single(),
     admin.from("juntadas").select("title").eq("id", juntadaId).single(),
     admin.from("expense_shares").select("member_id, amount_cents, guest_name").eq("expense_id", gastoId).in("member_id", targets),
     admin.rpc("juntada_transfers", { p_juntada: juntadaId }),
@@ -28,6 +29,7 @@ export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memb
     nameOf(admin, actorId),
   ]);
   if (!g || !j) return;
+  const payer = g.paid_by === actorId ? actor : await nameOf(admin, g.paid_by);
   const owed = new Map<string, number>();
   for (const t of (transfers ?? []) as { from_member: string; amount_cents: number }[]) {
     owed.set(t.from_member, (owed.get(t.from_member) ?? 0) + Number(t.amount_cents));
@@ -48,7 +50,7 @@ export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memb
       const debt = owed.get(memberId) ?? 0;
       const parts = [
         ...(e.own !== null ? [`Tu parte: ${money(e.own)}`] : []),
-        ...e.guests.map((x) => `${x.name} (tu invitada): ${money(x.cents)}`),
+        ...e.guests.map((x) => `${x.name} (tu invitada) le debe ${money(x.cents)} a ${memberId === g.paid_by ? "vos" : payer}`),
       ];
       return sendToMember(memberId, {
         title: e.own === null ? "¡Tu invitada está en un gasto!" : "¡Poniendo estaba la gansa!",
