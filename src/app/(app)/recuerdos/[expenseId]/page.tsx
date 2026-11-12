@@ -29,7 +29,7 @@ export default async function AlbumPage({ params, searchParams }: { params: Prom
   return (
     <>
       <Link href="/recuerdos" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite">
-        <ArrowLeft className="size-4" /> Recuerdos
+        <ArrowLeft className="size-4" /> Manija Memories
       </Link>
       <header className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-dark">Álbum</p>
