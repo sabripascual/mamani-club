@@ -25,6 +25,16 @@ function fieldErrors(error: z.ZodError) {
   return out;
 }
 
+/**
+ * Alias de devolución: si quien pagó lo eligió en el formulario, se guarda; si cambió
+ * quien pagó y no hay elección, se limpia (el alias anterior era de otra persona).
+ */
+async function saveRefundAlias(supabase: Awaited<ReturnType<typeof createClient>>, gastoId: string, formData: FormData, prefix = "", payerChanged = false) {
+  const chosen = formData.get(prefix + "refund_alias");
+  if (chosen === null && !payerChanged) return;
+  await supabase.rpc("set_expense_refund_alias", { p_expense_id: gastoId, p_alias: chosen ? String(chosen) : null });
+}
+
 const refresh = (juntadaId?: string | null) => {
   if (juntadaId) revalidatePath(`/gastos/${juntadaId}`);
   revalidatePath("/", "layout");
@@ -113,6 +123,7 @@ export async function createGasto(juntadaId: string, _: FormState, formData: For
   const { data: { user } } = await supabase.auth.getUser();
   const { data: gastoId, error } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
   if (error) return gastoDbError(error.message);
+  await saveRefundAlias(supabase, gastoId as string, formData);
   if (user) {
     after(() => notifyGastoLoaded(gastoId as string, juntadaId, [...parsed.data.participants, ...guests.map((g) => g.responsible_id)], user.id).catch(() => {}));
   }
@@ -127,12 +138,16 @@ export async function updateGasto(gastoId: string, juntadaId: string, _: FormSta
   if (r.error) return { fields: { shares: r.error } };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: prev } = await supabase.from("expense_shares").select("member_id, guest_name").eq("expense_id", gastoId);
+  const [{ data: prev }, { data: prevGasto }] = await Promise.all([
+    supabase.from("expense_shares").select("member_id, guest_name").eq("expense_id", gastoId),
+    supabase.from("expenses").select("paid_by").eq("id", gastoId).maybeSingle(),
+  ]);
   // Clave por parte: integrante sola o integrante + invitada. Se avisa solo por las partes nuevas.
   const key = (m: string, guest?: string | null) => `${m}|${(guest ?? "").toLowerCase()}`;
   const before = new Set((prev ?? []).map((p) => key(p.member_id as string, p.guest_name as string | null)));
   const { error } = await supabase.rpc("update_expense", { p_expense_id: gastoId, ...r.args, p_reason: parsed.data.reason });
   if (error) return gastoDbError(error.message);
+  await saveRefundAlias(supabase, gastoId, formData, "", prevGasto?.paid_by !== parsed.data.paid_by);
   const added = [
     ...parsed.data.participants.filter((m) => !before.has(key(m))),
     ...guests.filter((g) => !before.has(key(g.responsible_id, g.name))).map((g) => g.responsible_id),
@@ -199,6 +214,7 @@ export async function createJuntada(_: FormState, formData: FormData): Promise<F
     const { data: gastoId, error: gErr } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
     // La juntada ya existe: si el gasto falla, se puede agregar desde la juntada.
     if (gErr) redirect(`/gastos/${juntadaId}?aviso=${encodeURIComponent("La juntada se creó, pero el gasto no: " + gErr.message)}`);
+    await saveRefundAlias(supabase, gastoId as string, formData, "g_");
     const parts = [...gasto.parsed.data.participants, ...gasto.guests.map((g) => g.responsible_id)];
     if (user) after(() => notifyGastoLoaded(gastoId as string, juntadaId, parts, user.id).catch(() => {}));
   }
@@ -254,6 +270,15 @@ export async function settleTransfer(juntadaId: string, from: string, to: string
   });
   if (error) return { ok: false, error: error.message };
   if (user) after(() => notifyPaid(juntadaId, from, to, amountCents, user.id).catch(() => {}));
+  refresh(juntadaId);
+  return { ok: true };
+}
+
+/** La responsable de una invitada (o una admin) marca si la invitada ya pagó su parte. */
+export async function setGuestPaid(shareId: string, juntadaId: string, paid: boolean): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_guest_paid", { p_share_id: shareId, p_paid: paid });
+  if (error) return { ok: false, error: error.message };
   refresh(juntadaId);
   return { ok: true };
 }

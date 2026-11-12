@@ -6,8 +6,9 @@ import type { FormState } from "@/lib/expenses/actions";
 import type { CategoryTree, Member } from "@/lib/expenses/types";
 import { cn, displayName } from "@/lib/utils";
 import { Field } from "@/components/ui/field";
+import { LocationField } from "@/components/location-field";
 import { FormShell } from "./form-shell";
-import { GastoFields } from "./gasto-fields";
+import { GastoFields, type MyAlias } from "./gasto-fields";
 import { CategoryIcon } from "./category-icon";
 import { MemberAvatar } from "./member-avatar";
 
@@ -15,7 +16,7 @@ export type JuntadaInitial = { title: string; occurred_on: string; type_id: stri
 
 /** Crear o editar una juntada. Al crear, opcionalmente se carga el primer gasto. */
 export function JuntadaForm({
-  action, types, gastoCategories, members, meId, today, initial,
+  action, types, gastoCategories, members, meId, today, initial, myAliases,
 }: {
   action: (s: FormState, fd: FormData) => Promise<FormState>;
   types: CategoryTree;
@@ -24,6 +25,7 @@ export function JuntadaForm({
   meId: string;
   today: string;
   initial?: JuntadaInitial;
+  myAliases?: MyAlias[];
 }) {
   const editing = !!initial;
   const [typeId, setTypeId] = useState(initial?.type_id ?? "");
@@ -39,8 +41,7 @@ export function JuntadaForm({
         <>
           <Field label="Nombre de la juntada" name="j_title" placeholder="Ej: Asado en lo de Sofi" defaultValue={initial?.title} error={errors.title} maxLength={80} />
           <Field label="¿Cuándo es o fue?" name="j_occurred_on" type="date" defaultValue={initial?.occurred_on ?? today} error={errors.occurred_on} className="max-w-xs" />
-          <Field label="¿Dónde?" name="j_location" placeholder="Ej: Casa de Caro, Palermo" defaultValue={initial?.location ?? ""} error={errors.location} maxLength={200}
-            hint="Opcional. Se abre en Google Maps." />
+          <LocationField name="j_location" placeholder="Ej: Casa de Caro, Palermo" defaultValue={initial?.location} error={errors.location} />
 
           <fieldset>
             <legend className="mb-2 text-sm font-semibold text-graphite/80">Tipo de juntada</legend>
@@ -105,7 +106,7 @@ export function JuntadaForm({
               </button>
               {withGasto && (
                 <div className="mt-5">
-                  <GastoFields prefix="g_" categories={gastoCategories} members={members} meId={meId} defaultParticipants={attendees} errors={errors} />
+                  <GastoFields prefix="g_" categories={gastoCategories} members={members} meId={meId} defaultParticipants={attendees} errors={errors} myAliases={myAliases} />
                 </div>
               )}
             </section>

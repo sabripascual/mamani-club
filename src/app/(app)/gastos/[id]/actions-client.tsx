@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Check, Loader2, LogOut, Trash2, Undo2, UserPlus } from "lucide-react";
-import { joinJuntada, leaveJuntada, settleTransfer, voidGasto, voidJuntada, voidSettlement } from "@/lib/expenses/actions";
+import { joinJuntada, leaveJuntada, setGuestPaid, settleTransfer, voidGasto, voidJuntada, voidSettlement } from "@/lib/expenses/actions";
 import { celebrate } from "@/components/payment-celebration";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,37 @@ export function SettleButton({ juntadaId, from, to, amountCents, alias, meId }: 
       >
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Pagado
       </button>
+      {error && <span className="mt-1 max-w-56 text-right text-xs text-rose-dark">{error}</span>}
+    </span>
+  );
+}
+
+/** "Pagó" de una invitada (solo su responsable o una admin). Si ya pagó, permite deshacerlo. */
+export function GuestPaidButton({ shareId, juntadaId, paid }: { shareId: string; juntadaId: string; paid: boolean }) {
+  const { pending, error, run } = useAction();
+  return (
+    <span className="flex flex-col items-end">
+      {paid ? (
+        <button
+          onClick={() => { if (window.confirm("¿Deshacer? La invitada vuelve a quedar debiendo.")) run(() => setGuestPaid(shareId, juntadaId, false)); }}
+          disabled={pending}
+          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-semibold text-graphite/60 ring-1 ring-graphite/15 hover:text-graphite"
+        >
+          <Undo2 className="size-3.5" /> Deshacer
+        </button>
+      ) : (
+        <button
+          onClick={() => run(async () => {
+            const res = await setGuestPaid(shareId, juntadaId, true);
+            if (res.ok) celebrate("¡Gracias perrita!");
+            return res;
+          })}
+          disabled={pending}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-graphite px-3 text-xs font-semibold text-cream transition active:scale-95 disabled:opacity-60"
+        >
+          {pending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Pagó
+        </button>
+      )}
       {error && <span className="mt-1 max-w-56 text-right text-xs text-rose-dark">{error}</span>}
     </span>
   );

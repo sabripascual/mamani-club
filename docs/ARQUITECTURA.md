@@ -286,6 +286,21 @@ tests/e2e/             Playwright
   se avisa a la responsable, y el recordatorio de deuda aclara "Incluye la parte de tu
   invitada X".
 
+- **ADR-022** Las invitadas pagan lo suyo (migración 0011, reemplaza parte del ADR-021):
+  la parte de la invitada ya NO la debe su responsable. Sale de los saldos netos de las
+  integrantes (a quien pagó el gasto se le descuenta en `guests_cents`) y queda como deuda
+  aparte de la invitada con quien pagó (`v_guest_debts`). La marcan pagada su responsable
+  o una admin (`set_guest_paid`, auditado); editar el gasto conserva ese estado si no
+  cambian la parte ni quien cobra. La juntada no está saldada mientras alguna invitada
+  deba. Recordatorio push a la responsable desde el día siguiente y cada 2 días
+  (`guest_debt`).
+- **ADR-023** Alias de devolución por gasto (`expenses.refund_alias`): quien paga elige
+  entre sus alias (por defecto, el principal). En "Cómo saldamos" se muestra el elegido en
+  el último gasto que pagó esa persona en la juntada; si no eligió, su principal.
+- **ADR-024** Evento nuevo: al crearlo se avisa a todo el grupo (menos a quien lo creó)
+  con una frase al azar de `notification_messages` (kind `event_new`, editable en el
+  panel; `{evento}` y `{fecha}` se completan).
+
 ## 10. Riesgos y limitaciones conocidas
 
 - Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de

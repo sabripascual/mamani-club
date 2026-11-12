@@ -9,7 +9,7 @@ export type { JuntadaListItem };
 
 const JUNTADA_COLUMNS = "id, title, occurred_on, type_id, description, location, currency, created_by, status, void_reason, created_at, updated_at";
 const GASTO_COLUMNS =
-  "id, juntada_id, title, occurred_on, amount_cents, currency, base_amount_cents, category_id, subcategory_id, description, paid_by, created_by, split_type, status, void_reason, created_at, updated_at, fx_rate, fx_rate_date";
+  "id, juntada_id, title, occurred_on, amount_cents, currency, base_amount_cents, category_id, subcategory_id, description, paid_by, created_by, split_type, status, void_reason, created_at, updated_at, fx_rate, fx_rate_date, refund_alias";
 
 // PostgREST devuelve bigint como number (o string si es muy grande). Normalizamos.
 const num = (v: unknown) => Number(v ?? 0);
@@ -107,7 +107,7 @@ export async function getJuntada(id: string) {
   ]);
   const gastoIds = (gastos ?? []).map((g) => g.id);
   const { data: shares } = gastoIds.length
-    ? await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant, guest_name").in("expense_id", gastoIds).returns<Share[]>()
+    ? await supabase.from("expense_shares").select("id, expense_id, member_id, amount_cents, is_participant, guest_name, guest_paid_at").in("expense_id", gastoIds).returns<Share[]>()
     : { data: [] as Share[] };
   return {
     juntada,
@@ -127,7 +127,7 @@ export async function getGasto(id: string) {
   const supabase = await createClient();
   const { data: gasto } = await supabase.from("expenses").select(GASTO_COLUMNS).eq("id", id).maybeSingle<Gasto>();
   if (!gasto) return null;
-  const { data: shares } = await supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant, guest_name").eq("expense_id", id).returns<Share[]>();
+  const { data: shares } = await supabase.from("expense_shares").select("id, expense_id, member_id, amount_cents, is_participant, guest_name, guest_paid_at").eq("expense_id", id).returns<Share[]>();
   return { gasto: { ...gasto, amount_cents: num(gasto.amount_cents) }, shares: (shares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })) };
 }
 

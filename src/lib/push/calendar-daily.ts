@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { displayName } from "@/lib/utils";
-import { planBirthdays, planEventReminders, planWeekly, type Msg, type Planned } from "./calendar-plan";
+import { planBirthdays, planEventReminders, planNewEvent, planWeekly, type Msg, type Planned } from "./calendar-plan";
 import { sendToMember } from "./send";
 
 const AR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
@@ -80,4 +80,20 @@ export async function sendBroadcast(recipients: string[], title: string, body: s
   const today = AR.format(new Date());
   const plan: Planned[] = recipients.map((r) => ({ kind: "broadcast", member_id: r, ref_id: ref, title, body, url, tag: `aviso-${ref.slice(0, 8)}` }));
   return deliver(plan, today);
+}
+
+const WHEN = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false });
+
+/** Al crear un evento: aviso a todo el grupo (menos a quien lo creó) con una frase al azar. */
+export async function notifyNewEvent(eventId: string, creatorId: string) {
+  const admin = createAdminClient();
+  const [{ data: e }, { data: people }, { data: pool }] = await Promise.all([
+    admin.from("events").select("id, title, starts_at").eq("id", eventId).maybeSingle(),
+    admin.from("profiles").select("id").eq("status", "active"),
+    admin.from("notification_messages").select("id, title, body").eq("kind", "event_new").eq("active", true),
+  ]);
+  if (!e) return 0;
+  const when = WHEN.format(new Date(e.starts_at)).replace(/^./, (c) => c.toUpperCase()) + " h";
+  const plan = planNewEvent({ id: e.id, title: e.title, when }, (people ?? []).map((p) => p.id as string), creatorId, pickRandom, (pool ?? []) as Msg[]);
+  return deliver(plan, AR.format(new Date()));
 }

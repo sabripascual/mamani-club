@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Star, Trash2 } from "lucide-react";
-import { addAlias, makePrimaryAlias, removeAlias, type AliasResult } from "@/lib/profile/actions";
+import { Check, Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import { addAlias, makePrimaryAlias, removeAlias, updateAlias, type AliasResult } from "@/lib/profile/actions";
 import type { MemberAlias } from "@/lib/profile/aliases";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ export function AliasManager({ aliases }: { aliases: MemberAlias[] }) {
   const [error, setError] = useState<string | null>(null);
   const [alias, setAlias] = useState("");
   const [label, setLabel] = useState("");
+  const [editing, setEditing] = useState<{ id: string; alias: string; label: string } | null>(null);
   const run = (fn: () => Promise<AliasResult>, after?: () => void) =>
     start(async () => {
       setError(null);
@@ -24,7 +25,24 @@ export function AliasManager({ aliases }: { aliases: MemberAlias[] }) {
     <div className="flex flex-col gap-3">
       {aliases.length === 0 && <p className="text-sm text-graphite/60">Todavía no cargaste alias. Aparecen cuando alguien te tiene que transferir.</p>}
       <ul className="flex flex-col gap-2">
-        {aliases.map((a) => (
+        {aliases.map((a) => editing?.id === a.id ? (
+          <li key={a.id}>
+            <form onSubmit={(e) => { e.preventDefault(); run(() => updateAlias(a.id, editing.alias, editing.label), () => setEditing(null)); }}
+              className="flex flex-col gap-2 rounded-2xl bg-white p-3 ring-2 ring-rose/40 sm:flex-row">
+              <input value={editing.alias} onChange={(e) => setEditing({ ...editing, alias: e.target.value })} aria-label="Alias" autoCapitalize="none" autoCorrect="off" maxLength={20} autoFocus
+                className="h-11 min-w-0 flex-1 rounded-xl border border-graphite/10 bg-white px-3 font-mono text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
+              <input value={editing.label} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="Ej: Mercado Pago" aria-label="Etiqueta" maxLength={30}
+                className="h-11 min-w-0 rounded-xl border border-graphite/10 bg-white px-3 text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15 sm:w-40" />
+              <div className="flex gap-2">
+                <button disabled={pending || !editing.alias.trim()} className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-graphite px-4 text-sm font-semibold text-cream disabled:opacity-40">
+                  <Check className="size-4" /> Guardar
+                </button>
+                <button type="button" onClick={() => { setEditing(null); setError(null); }} aria-label="Cancelar"
+                  className="inline-flex size-11 items-center justify-center rounded-xl text-graphite/60 ring-1 ring-graphite/10"><X className="size-4" /></button>
+              </div>
+            </form>
+          </li>
+        ) : (
           <li key={a.id} className={cn("flex items-center gap-2 rounded-2xl p-3", a.is_primary ? "bg-lime/70" : "bg-white/70")}>
             <div className="min-w-0 flex-1">
               <p className="truncate font-mono text-sm font-semibold">{a.alias}</p>
@@ -36,6 +54,10 @@ export function AliasManager({ aliases }: { aliases: MemberAlias[] }) {
                 <Star className="size-3.5" /> Principal
               </button>
             )}
+            <button disabled={pending} onClick={() => { setError(null); setEditing({ id: a.id, alias: a.alias, label: a.label ?? "" }); }} aria-label={`Editar ${a.alias}`}
+              className="inline-flex size-9 items-center justify-center rounded-full text-graphite/50 hover:text-graphite">
+              <Pencil className="size-4" />
+            </button>
             <button disabled={pending} onClick={() => { if (window.confirm(`¿Borrar el alias ${a.alias}?`)) run(() => removeAlias(a.id)); }}
               aria-label={`Borrar ${a.alias}`} className="inline-flex size-9 items-center justify-center rounded-full text-graphite/50 hover:text-rose-dark">
               <Trash2 className="size-4" />

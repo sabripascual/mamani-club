@@ -5,6 +5,7 @@ import type { FormState } from "@/lib/expenses/actions";
 import type { CategoryTree } from "@/lib/expenses/types";
 import { cn } from "@/lib/utils";
 import { Field } from "@/components/ui/field";
+import { LocationField } from "@/components/location-field";
 import { FormShell } from "@/components/expenses/form-shell";
 import { CategoryIcon } from "@/components/expenses/category-icon";
 
@@ -37,7 +38,7 @@ export function EventForm({ action, types, today, initial, defaultDate }: {
             </div>
             {errors.type_id && <p className="mt-1.5 text-sm text-rose-dark">{errors.type_id}</p>}
           </fieldset>
-          <Field label="¿Dónde?" name="location" placeholder="Dirección o lugar" defaultValue={initial?.location ?? ""} maxLength={200} hint="Opcional. Se abre en Google Maps." />
+          <LocationField name="location" placeholder="Dirección o lugar" defaultValue={initial?.location} />
           <div className="flex flex-col gap-1.5">
             <label htmlFor="description" className="text-sm font-semibold text-graphite/80">Detalle <span className="font-normal text-graphite/50">(opcional)</span></label>
             <textarea id="description" name="description" rows={3} maxLength={500} defaultValue={initial?.description ?? ""} placeholder="Qué llevar, dress code…"

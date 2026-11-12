@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, isBirthdayOn, planBirthdays, planEventReminders, planWeekly } from "./calendar-plan";
+import { addDays, isBirthdayOn, planBirthdays, planEventReminders, planNewEvent, planWeekly } from "./calendar-plan";
 
 const first = <T,>(xs: T[]) => xs[0];
 const people = [
@@ -53,5 +53,18 @@ describe("eventos", () => {
   });
   it("addDays cruza meses y años", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+});
+
+describe("planNewEvent", () => {
+  const pool = [{ id: "m1", title: "Se vienen cositasss", body: "{evento} · {fecha}" }];
+  const ev = { id: "e1", title: "Asado", when: "Sábado 15 de noviembre, 21:00 h" };
+  it("a todas menos a quien lo creó, con la frase completada", () => {
+    const plan = planNewEvent(ev, ["ana", "bea", "caro"], "ana", first, pool);
+    expect(plan.map((p) => p.member_id)).toEqual(["bea", "caro"]);
+    expect(plan[0]).toMatchObject({ kind: "event_new", title: "Se vienen cositasss", body: "Asado · Sábado 15 de noviembre, 21:00 h", url: "/calendario/e1" });
+  });
+  it("sin frases activas, usa una por defecto", () => {
+    expect(planNewEvent(ev, ["bea"], "ana", first, [])[0].title).toBe("¡Hay plan nuevo!");
   });
 });

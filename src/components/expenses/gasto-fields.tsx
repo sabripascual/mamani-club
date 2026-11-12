@@ -21,7 +21,11 @@ export type GastoInitial = {
   shares: { member_id: string; amount_cents: number }[];
   /** Invitadas (no son del club): nombre, responsable y su parte. */
   guests?: { name: string; responsible_id: string; amount_cents: number }[];
+  /** Alias al que quien pagó pidió que le devuelvan. */
+  refund_alias?: string | null;
 };
+
+export type MyAlias = { alias: string; label: string | null; is_primary: boolean };
 
 type Guest = { key: string; name: string; responsible: string };
 let guestSeq = 0;
@@ -34,7 +38,7 @@ const guestUnit = (g: Guest) => `${g.responsible}|${g.name.trim().toLowerCase()}
  * (primer gasto) sin chocar nombres. Las participantes arrancan con las asistentes.
  */
 export function GastoFields({
-  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {},
+  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {}, myAliases = [],
 }: {
   prefix?: string;
   categories: CategoryTree;
@@ -43,6 +47,8 @@ export function GastoFields({
   defaultParticipants?: string[];
   initial?: GastoInitial;
   errors?: Partial<Record<string, string>>;
+  /** Mis alias, para elegir a cuál me devuelven si pagué yo. */
+  myAliases?: MyAlias[];
 }) {
   const n = (k: string) => `${prefix}${k}`;
   const f = (k: string) => errors[n(k)];
@@ -152,6 +158,24 @@ export function GastoFields({
         </div>
       </fieldset>
 
+      {paidBy === meId && (
+        myAliases.length > 0 ? (
+          <div className="-mt-3 flex flex-col gap-1.5">
+            <label htmlFor={n("refund_alias")} className="text-sm font-semibold text-graphite/80">¿A qué alias te devuelven?</label>
+            <select id={n("refund_alias")} name={n("refund_alias")}
+              defaultValue={(initial?.refund_alias && myAliases.some((a) => a.alias === initial.refund_alias) ? initial.refund_alias : null) ?? myAliases.find((a) => a.is_primary)?.alias ?? myAliases[0].alias}
+              className="h-12 w-full min-w-0 rounded-2xl border border-graphite/10 bg-white/70 px-4 font-mono text-sm outline-none focus:border-rose focus:bg-white focus:ring-4 focus:ring-rose/15">
+              {myAliases.map((a) => (
+                <option key={a.alias} value={a.alias}>{a.alias}{a.label ? ` · ${a.label}` : ""}{a.is_primary ? " (principal)" : ""}</option>
+              ))}
+            </select>
+            <p className="text-xs text-graphite/55">Por defecto, tu alias principal. Es el que van a ver para transferirte.</p>
+          </div>
+        ) : (
+          <p className="-mt-3 rounded-2xl bg-lime/50 p-3 text-xs text-graphite/70">Cargá un alias en tu perfil para que te puedan transferir.</p>
+        )
+      )}
+
       <fieldset>
         <div className="mb-2 flex items-center justify-between">
           <legend className="text-sm font-semibold text-graphite/80">¿Entre quiénes se divide?</legend>
@@ -181,7 +205,7 @@ export function GastoFields({
 
       <fieldset>
         <legend className="mb-1 text-sm font-semibold text-graphite/80">Invitadas <span className="font-normal text-graphite/50">(opcional)</span></legend>
-        <p className="mb-3 text-xs text-graphite/55">Alguien que no es del club. Su parte la paga la responsable y no le suma presencia ni consumo.</p>
+        <p className="mb-3 text-xs text-graphite/55">Alguien que no es del club. Paga su parte directo a quien pagó el gasto; su responsable (o una admin) marca cuando pagó. No suma presencia ni consumo.</p>
         {guests.length > 0 && (
           <ul className="mb-3 flex flex-col gap-2">
             {guests.map((g) => (
