@@ -5,10 +5,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type PushPayload = { title: string; body: string; url: string; tag: string };
 type Sub = { id: string; endpoint: string; p256dh: string; auth: string };
 
+/** Clave pública VAPID. Se lee en el servidor (acepta el nombre nuevo y el anterior). */
+export function vapidPublicKey() {
+  return process.env.VAPID_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null;
+}
+
 let configured = false;
 function configure() {
   if (configured) return true;
-  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const pub = vapidPublicKey();
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (!pub || !priv) return false;
   // "subject" identifica a quien envía ante los servicios de push (Apple/Google).
@@ -20,7 +25,7 @@ function configure() {
 }
 
 export function pushConfigured() {
-  return !!(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+  return !!(vapidPublicKey() && process.env.VAPID_PRIVATE_KEY);
 }
 
 /**
