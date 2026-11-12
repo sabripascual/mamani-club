@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { signAvatarUrls } from "@/lib/storage/avatars";
 import type {
@@ -11,20 +12,20 @@ const EXPENSE_COLUMNS =
 // PostgREST devuelve bigint como number (o string si es muy grande). Normalizamos.
 const num = (v: unknown) => Number(v ?? 0);
 
-export async function getCategories(opts: { includeArchived?: boolean } = {}) {
+export const getCategories = cache(async (includeArchived = false) => {
   const supabase = await createClient();
   let q = supabase.from("categories").select("id, parent_id, code, name, icon, sort_order, archived").order("sort_order");
-  if (!opts.includeArchived) q = q.eq("archived", false);
+  if (!includeArchived) q = q.eq("archived", false);
   const { data } = await q.returns<Category[]>();
   const all = data ?? [];
   const tree: CategoryTree = all
     .filter((c) => !c.parent_id)
     .map((c) => ({ ...c, children: all.filter((s) => s.parent_id === c.id) }));
   return { all, tree, byId: new Map(all.map((c) => [c.id, c])) };
-}
+});
 
 /** Integrantes aprobadas (activas y desactivadas) con avatar firmado. */
-export async function getMembers() {
+export const getMembers = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
@@ -36,7 +37,7 @@ export async function getMembers() {
   const urls = await signAvatarUrls(rows.map((r) => r.avatar_path));
   const members: Member[] = rows.map((r) => ({ ...r, avatar_url: r.avatar_path ? (urls.get(r.avatar_path) ?? null) : null }));
   return { members, byId: new Map(members.map((m) => [m.id, m])) };
-}
+});
 
 export type ExpenseFilters = {
   year?: number;

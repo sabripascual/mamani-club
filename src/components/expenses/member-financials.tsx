@@ -20,7 +20,7 @@ const Stat = ({ label, value, tone }: { label: string; value: string; tone?: str
 /** Perfil financiero: resumen (adelantos y consumo separados) + historial filtrable. */
 export async function MemberFinancials({ memberId, filters, basePath }: { memberId: string; filters: MovementFilters; basePath: string }) {
   const [balances, movements, { tree, byId: catById }] = await Promise.all([
-    getMemberBalances(memberId), getMemberMovements(memberId), getCategories({ includeArchived: true }),
+    getMemberBalances(memberId), getMemberMovements(memberId), getCategories(true),
   ]);
   const ars = balances.find((b) => b.currency === "ARS");
 

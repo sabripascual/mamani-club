@@ -27,7 +27,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     status: ["pending", "partial", "settled"].includes(sp.estado ?? "") ? (sp.estado as ExpenseFilters["status"]) : undefined,
   };
   const [expenses, { tree, byId: catById }, { members, byId: memberById }] = await Promise.all([
-    listExpenses(filters), getCategories({ includeArchived: true }), getMembers(),
+    listExpenses(filters), getCategories(true), getMembers(),
   ]);
 
   // Lo que debo en cada juntada listada.

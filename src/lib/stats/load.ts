@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Dataset, Filters, StatExpense, StatShare } from "./compute";
 
@@ -16,7 +17,7 @@ async function fetchAll<T>(build: () => Q): Promise<T[]> {
 }
 
 /** Todas las juntadas activas y sus partes. Los filtros se aplican en compute.ts. */
-export async function loadDataset(): Promise<Dataset> {
+export const loadDataset = cache(async (): Promise<Dataset> => {
   const supabase = await createClient();
   const [expenses, shares, { data: categories }, { data: members }] = await Promise.all([
     fetchAll<StatExpense>(() =>
@@ -36,7 +37,7 @@ export async function loadDataset(): Promise<Dataset> {
     categories: categories ?? [],
     members: members ?? [],
   };
-}
+});
 
 export type PeriodParams = { anio?: string; mes?: string; desde?: string; hasta?: string; categoria?: string; integrante?: string };
 

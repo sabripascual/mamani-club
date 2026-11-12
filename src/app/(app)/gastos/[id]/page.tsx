@@ -24,7 +24,7 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const { profile } = await requireActiveMember();
   const [data, { byId: catById }, { members, byId: memberById }, album] = await Promise.all([
-    getExpense(id), getCategories({ includeArchived: true }), getMembers(), getAlbum(id, profile.id, { limit: 6 }),
+    getExpense(id), getCategories(true), getMembers(), getAlbum(id, profile.id, { limit: 6 }),
   ]);
   if (!data) notFound();
   const { expense: e, shares, payments, status } = data;

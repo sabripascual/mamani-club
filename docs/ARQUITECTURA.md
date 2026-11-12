@@ -242,6 +242,18 @@ tests/e2e/             Playwright
   (2,75:1), por eso el texto rosa usa `#C81A84` (4,9:1); el lima se usa como fondo de
   resaltado con texto grafito (11:1). Gráficos: `#C81A84` + `#3F74AB` (validados).
 
+- **ADR-018** Performance:
+  - Funciones de Vercel en `pdx1` (Oregon), la misma región que Supabase (`us-west-2`):
+    cada consulta deja de cruzar EE.UU. (antes `iad1`, ~70 ms por ida y vuelta).
+  - Sesión con `auth.getClaims()`: el JWT (ES256) se verifica localmente con el JWKS
+    cacheado, sin consultar al servidor de Auth en cada request. Las acciones que
+    escriben siguen usando `getUser()`.
+  - URLs firmadas de fotos y avatares reutilizadas en memoria (válidas 2 h, se reusan
+    90 min) para que el navegador las cachee.
+  - `loading.tsx` con esqueletos en todas las secciones: la navegación responde al
+    instante y Next prefetchea esa estructura desde la barra de navegación.
+  - Consultas repetidas dentro de una pantalla deduplicadas con `React.cache`.
+
 ## 10. Riesgos y limitaciones conocidas
 
 - Supabase Free en `us-west-2` (São Paulo no está disponible en Free): ~150–200 ms de
