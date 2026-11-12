@@ -11,6 +11,9 @@ import { displayName, initials } from "@/lib/utils";
 import { ProfileForm } from "./profile-form";
 import { AvatarPicker } from "./avatar-picker";
 import { PushToggle } from "@/components/pwa/push-toggle";
+import Link from "next/link";
+import { ChevronRight, ShieldCheck } from "lucide-react";
+import { pendingRequestsCount } from "@/lib/admin/pending";
 import { vapidPublicKey } from "@/lib/push/send";
 import { MemberFinancials, type MovementFilters } from "@/components/expenses/member-financials";
 
@@ -27,6 +30,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const filters = await searchParams;
   const { profile } = await requireActiveMember();
   const urls = await signAvatarUrls([profile.avatar_path]);
+  const isAdmin = profile.role === "admin";
+  const pendingRequests = isAdmin ? await pendingRequestsCount() : 0;
   const avatarUrl = profile.avatar_path ? urls.get(profile.avatar_path) : null;
 
   return (
@@ -52,6 +57,20 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </div>
         </div>
       </Card>
+
+      {isAdmin && (
+        <Link href="/admin/solicitudes" className="mt-6 flex items-center gap-3 rounded-[var(--radius-card)] bg-graphite p-4 text-cream transition hover:bg-graphite/90">
+          <ShieldCheck className="size-5 text-lime" />
+          <span className="flex-1">
+            <strong>Administración</strong>
+            <span className="block text-sm text-cream/70">Solicitudes, integrantes, categorías y auditoría</span>
+          </span>
+          {pendingRequests > 0 && (
+            <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-rose px-2 py-0.5 text-sm font-bold text-graphite">{pendingRequests}</span>
+          )}
+          <ChevronRight className="size-5 text-cream/60" />
+        </Link>
+      )}
 
       <h2 className="mt-10 mb-1 font-display text-xl">Recordatorios de deudas</h2>
       <p className="mb-3 text-sm text-graphite/60">

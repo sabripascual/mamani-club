@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/brand";
 import { ADMIN_ITEM, MEMORIES_ITEM, NAV_ITEMS, isActive } from "./nav-items";
 
-export function BottomNav() {
+export function BottomNav({ pendingRequests = 0 }: { pendingRequests?: number }) {
   const pathname = usePathname();
   return (
     <nav
@@ -40,8 +40,11 @@ export function BottomNav() {
                   active ? "text-graphite" : "text-graphite/45",
                 )}
               >
-                <span className={cn("rounded-full px-4 py-1 transition", active && "bg-lime")}>
+                <span className={cn("relative rounded-full px-4 py-1 transition", active && "bg-lime")}>
                   <Icon className="size-[22px]" strokeWidth={active ? 2 : 1.6} />
+                  {href === "/perfil" && pendingRequests > 0 && (
+                    <span className="absolute top-0.5 right-3 size-2.5 rounded-full bg-rose ring-2 ring-cream" aria-label={`${pendingRequests} solicitudes pendientes`} />
+                  )}
                 </span>
                 {label}
               </Link>
@@ -53,7 +56,7 @@ export function BottomNav() {
   );
 }
 
-export function SideNav({ isAdmin }: { isAdmin: boolean }) {
+export function SideNav({ isAdmin, pendingRequests = 0 }: { isAdmin: boolean; pendingRequests?: number }) {
   const pathname = usePathname();
   const base = [...NAV_ITEMS.slice(0, 4), MEMORIES_ITEM, ...NAV_ITEMS.slice(4)];
   const items = isAdmin ? [...base, ADMIN_ITEM] : base;
@@ -83,6 +86,11 @@ export function SideNav({ isAdmin }: { isAdmin: boolean }) {
                 >
                   <Icon className="size-5" strokeWidth={active || primary ? 2 : 1.6} />
                   {primary ? "Nueva juntada" : label}
+                  {href === "/admin" && pendingRequests > 0 && (
+                    <span className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-rose px-1.5 text-xs font-bold text-graphite">
+                      {pendingRequests}
+                    </span>
+                  )}
                 </Link>
               </li>
             );

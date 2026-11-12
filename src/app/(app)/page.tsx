@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ReceiptText } from "lucide-react";
 import { getAlbums } from "@/lib/photos/queries";
 import { MemoriesCarousel } from "@/components/photos/memories-carousel";
+import { PendingRequestsBanner } from "@/components/admin/pending-banner";
+import { pendingRequestsCount } from "@/lib/admin/pending";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCategories, getMemberBalances, getMembers } from "@/lib/expenses/queries";
 import { loadDataset, parsePeriod, type PeriodParams } from "@/lib/stats/load";
@@ -23,6 +25,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     loadDataset(), getMemberBalances(profile.id), getCategories(), getMembers(), getAlbums({ limit: 12 }),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
+  const pendingRequests = profile.role === "admin" ? await pendingRequestsCount() : 0;
   const { filters } = parsePeriod(sp, today);
 
   return (
@@ -32,6 +35,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <p className="mt-4 font-display text-[1.7rem] leading-tight font-semibold">Hola, {displayName(profile)} 💖</p>
         <p className="text-sm text-graphite/60">La cuenta de nuestras juntadas.</p>
       </header>
+      <PendingRequestsBanner count={pendingRequests} />
       <InstallHint />
 
       {/* Los recuerdos van arriba: la app no es solo una calculadora. */}
