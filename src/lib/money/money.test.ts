@@ -75,3 +75,12 @@ describe("simplifyDebts", () => {
     expect(simplifyDebts([])).toEqual([]);
   });
 });
+
+describe("formatMoney opciones", () => {
+  it("compact abrevia millones con un decimal", () => {
+    expect(norm(formatMoney(143000000, "ARS", { compact: true }))).toMatch(/1,4\s?M/);
+  });
+  it("round quita centavos", () => {
+    expect(norm(formatMoney(11689293, "ARS", { round: true }))).toBe("$ 116.893");
+  });
+});
