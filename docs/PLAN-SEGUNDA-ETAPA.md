@@ -73,13 +73,45 @@ propuesta de etapas. **Nada de esto está implementado todavía.**
 - **Privacidad**: la fecha de nacimiento se muestra como día y mes; el año queda
   oculto salvo que se decida lo contrario.
 
-## 9. Etapas propuestas
+## 9. Decisiones tomadas
+
+**Juntadas con varios gastos (estilo Tricount)**
+- Una juntada es el encuentro y contiene uno o más **gastos**. Cada gasto tiene su
+  pagadora, sus participantes, su división y su categoría/subcategoría.
+- Cada una debe solo por los gastos en los que participó.
+- **Pago neto por juntada**: la app compensa dentro de la juntada y sugiere
+  "Caro → Ana $13.500 · alias ana.mp". Un "Pagado" salda todo lo de ese par en esa
+  juntada; el detalle por gasto sigue visible.
+- Estados de la juntada: Pendiente → Parcialmente saldado → **Saldado**.
+- **Categorías**: la juntada tiene categoría (tipo de encuentro) y cada gasto también
+  (tipo de gasto). Rankings de ambos. Nombres editables por admins.
+- **"Estuvo"**: puso "Voy" en el evento o participa en al menos un gasto de la juntada.
+  Una participación por juntada.
+- Las juntadas existentes se migran a "juntada con un único gasto".
+
+**Calendario**: todas ven todos los eventos y se pueden sumar. 1 evento = 1 juntada.
+Recordatorios: día anterior 10:00 y 2 h antes (a "Voy" y "Tal vez").
+
+**Cumpleaños**: día, mes y edad visibles. Aviso de la semana previa a todas menos la
+cumpleañera.
+
+**Alias**: solo alias (hasta 5, uno principal).
+
+**Panel de notificaciones**: frases escritas por las admins, enviadas los lunes 8:00.
+Envíos manuales desde el panel.
+
+**Cuotas con tarjeta (créditos)**: se carga el total; se divide entre las deudoras y
+ese monto en N cuotas mensuales. Recordatorios del 1 al 5 de cada mes a las deudoras y
+a quien cobra, hasta saldar la cuota del mes. **Préstamos: fuera de alcance.**
+
+## 10. Etapas
 
 | Etapa | Contenido | Migración | Tamaño |
 |---|---|---|---|
 | **A** | E1, E2, M1, M2, M3, M4 | No | Chico |
-| **B** | Alias de transferencia (T1–T3) | Sí | Chico-mediano |
-| **C** | Calendario, eventos, ubicación, convertir en juntada, recordatorios (C1–C5) | Sí | Grande |
-| **D** | Cumpleaños y feriados (B1–B5, C6) | Sí | Mediano |
-| **E** | Panel de notificaciones (N1–N3) | Sí | Mediano |
-| **F** | Cuotas con tarjeta y préstamos (F1–F2) | Sí | Grande, requiere diseño previo |
+| **B** | Juntadas con varios gastos, pago neto por juntada, categorías de juntada y de gasto | Sí | Grande |
+| **C** | Alias de transferencia (T1–T3) | Sí | Chico-mediano |
+| **D** | Calendario, eventos, ubicación, convertir en juntada, recordatorios (C1–C5) | Sí | Grande |
+| **E** | Cumpleaños y feriados (B1–B5, C6) | Sí | Mediano |
+| **F** | Panel de notificaciones (N1–N3) | Sí | Mediano |
+| **G** | Gastos en cuotas con tarjeta (F1) | Sí | Grande |
