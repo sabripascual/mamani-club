@@ -7,7 +7,7 @@ import { AddCategory, CategoryItemActions } from "./category-client";
 export const metadata: Metadata = { title: "Categorías · MAMANÍ CLUB" };
 
 export default async function CategoriesAdminPage() {
-  const { tree } = await getCategories({ includeArchived: true });
+  const { tree } = await getCategories(true);
   return (
     <>
       <h1 className="mb-1 font-display text-[1.8rem] font-semibold">Categorías</h1>

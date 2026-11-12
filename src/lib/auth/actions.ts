@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { notifyAdminsNewRequest } from "@/lib/push/admin-alerts";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authErrorMessage } from "./errors";
@@ -25,6 +27,10 @@ export async function signUp(_: FormState, formData: FormData): Promise<FormStat
   const { email, password, ...meta } = parsed.data;
   const { error } = await supabase.auth.signUp({ email, password, options: { data: meta } });
   if (error) return { error: authErrorMessage(error.message), values: keep };
+
+  // Aviso push a las admins, después de responder (no demora el registro).
+  const name = meta.nickname || `${meta.first_name} ${meta.last_name}`;
+  after(() => notifyAdminsNewRequest(name).catch(() => {}));
 
   // La sesión ya quedó abierta (sin confirmación de email). El cliente sube el avatar y navega.
   return { ok: true };

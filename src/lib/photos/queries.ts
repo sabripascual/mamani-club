@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { signUrls } from "@/lib/storage/signed-urls";
 
 export type PhotoItem = {
   id: string;
@@ -15,14 +16,8 @@ export type PhotoItem = {
   liked_by_me: boolean;
 };
 
-const URL_TTL = 60 * 60; // 1 hora
-
-async function signMany(paths: string[]) {
-  if (paths.length === 0) return new Map<string, string>();
-  const supabase = await createClient();
-  const { data } = await supabase.storage.from("photos").createSignedUrls(paths, URL_TTL);
-  return new Map((data ?? []).filter((d) => d.path && d.signedUrl).map((d) => [d.path!, d.signedUrl]));
-}
+// Las rutas vienen de consultas con RLS: solo se firman fotos que la integrante puede ver.
+const signMany = (paths: string[]) => signUrls("photos", paths);
 
 type Row = { id: string; expense_id: string; uploaded_by: string; created_at: string; width: number; height: number; storage_path: string; thumb_path: string };
 

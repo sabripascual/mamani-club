@@ -7,16 +7,16 @@ import { PROFILE_COLUMNS, type Profile } from "./types";
 /** Usuaria logueada + su perfil (una sola consulta por request gracias a cache()). */
 export const getSession = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Verificación local del JWT (sin ida y vuelta al servidor de Auth).
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) return null;
   const { data: profile } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
-    .eq("id", user.id)
+    .eq("id", userId)
     .single<Profile>();
-  return profile ? { user, profile } : null;
+  return profile ? { user: { id: userId }, profile } : null;
 });
 
 /** Para páginas privadas: exige integrante activa. */
