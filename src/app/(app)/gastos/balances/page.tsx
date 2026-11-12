@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Scale, Sparkles } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
-import { getDebts, getMemberBalances, getMembers } from "@/lib/expenses/queries";
+import { getMemberBalances, getMembers, getPendingTransfers } from "@/lib/expenses/queries";
 import { simplifyDebts } from "@/lib/money/simplify";
 import { formatMoney } from "@/lib/money/format";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,7 +16,17 @@ export const metadata: Metadata = { title: "Balances · MAMANÍ CLUB" };
 export default async function BalancesPage() {
   const { profile } = await requireActiveMember();
   const me = profile.id;
-  const [debts, balances, { byId }] = await Promise.all([getDebts(), getMemberBalances(), getMembers()]);
+  const [transfers, balances, { byId }] = await Promise.all([getPendingTransfers(), getMemberBalances(), getMembers()]);
+  // Quién le debe a quién: suma de las transferencias pendientes de todas las juntadas.
+  const pairs = new Map<string, { debtor_id: string; creditor_id: string; currency: string; amount_cents: number; juntadas: number }>();
+  for (const t of transfers) {
+    const k = `${t.from_member}>${t.to_member}>${t.currency}`;
+    const p = pairs.get(k) ?? { debtor_id: t.from_member, creditor_id: t.to_member, currency: t.currency, amount_cents: 0, juntadas: 0 };
+    p.amount_cents += t.amount_cents;
+    p.juntadas += 1;
+    pairs.set(k, p);
+  }
+  const debts = [...pairs.values()];
   const currencies = [...new Set([...debts.map((d) => d.currency), ...balances.map((b) => b.currency)])].sort();
 
   if (balances.length === 0) {
@@ -77,7 +87,10 @@ export default async function BalancesPage() {
                           <strong>{memberName(byId.get(d.debtor_id), me)}</strong> {d.debtor_id === me ? "le debés" : "le debe"} a{" "}
                           <strong>{memberName(byId.get(d.creditor_id), me)}</strong>
                         </p>
-                        <span className="font-semibold tabular-nums">{formatMoney(d.amount_cents, cur)}</span>
+                        <span className="text-right">
+                          <span className="block font-semibold tabular-nums">{formatMoney(d.amount_cents, cur)}</span>
+                          <span className="text-[11px] text-graphite/50">{d.juntadas} {d.juntadas === 1 ? "juntada" : "juntadas"}</span>
+                        </span>
                       </Link>
                     </li>
                   );
@@ -90,7 +103,7 @@ export default async function BalancesPage() {
                 <p className="flex items-center gap-2 font-semibold"><Sparkles className="size-4 text-rose-dark" /> Transferencias sugeridas</p>
                 <p className="mt-1 mb-3 text-xs text-graphite/60">
                   Con {suggested.length} transferencias en vez de {curDebts.length} quedaría todo saldado. Es solo una sugerencia:
-                  las deudas siguen registradas por juntada y se marcan como pagadas en cada una.
+                  las transferencias se registran dentro de cada juntada.
                 </p>
                 <ul className="flex flex-col gap-1.5 text-sm">
                   {suggested.map((s) => (
@@ -131,7 +144,7 @@ export default async function BalancesPage() {
               </table>
             </div>
             <p className="mt-2 text-xs text-graphite/50">
-              <strong>Adelantó</strong>: plata que puso por el grupo. <strong>Consumió</strong>: su parte en las juntadas en que participó.
+              <strong>Adelantó</strong>: plata que puso por el grupo. <strong>Consumió</strong>: su parte en los gastos de los que participó.
             </p>
           </section>
         );

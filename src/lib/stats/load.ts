@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { Dataset, Filters, StatExpense, StatShare } from "./compute";
+import type { Dataset, Filters, StatAttendee, StatGasto, StatJuntada, StatNet, StatSettlement, StatShare } from "./compute";
 
 type Q = { range: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }> };
 
@@ -16,24 +16,30 @@ async function fetchAll<T>(build: () => Q): Promise<T[]> {
   }
 }
 
-/** Todas las juntadas activas y sus partes. Los filtros se aplican en compute.ts. */
+/** Juntadas activas con sus gastos, partes, asistentes, saldos y transferencias. Los filtros se aplican en compute.ts. */
 export const loadDataset = cache(async (): Promise<Dataset> => {
   const supabase = await createClient();
-  const [expenses, shares, { data: categories }, { data: members }] = await Promise.all([
-    fetchAll<StatExpense>(() =>
-      supabase.from("expenses")
-        .select("id, title, occurred_on, category_id, subcategory_id, base_amount_cents, fx_rate, paid_by, created_by")
-        .eq("status", "active").order("occurred_on") as unknown as Q),
-    fetchAll<StatShare>(() =>
-      supabase.from("v_share_balances")
-        .select("expense_id, member_id, amount_cents, is_participant, is_payer, outstanding_cents")
-        .order("share_id") as unknown as Q),
-    supabase.from("categories").select("id, parent_id, code, name"),
+  const [juntadas, gastos, shares, attendees, nets, settlements, { data: categories }, { data: members }] = await Promise.all([
+    fetchAll<StatJuntada>(() => supabase.from("juntadas").select("id, title, occurred_on, type_id, created_by").eq("status", "active").order("occurred_on") as unknown as Q),
+    fetchAll<StatGasto>(() => supabase.from("expenses").select("id, juntada_id, category_id, base_amount_cents, fx_rate, paid_by, created_by").eq("status", "active").order("id") as unknown as Q),
+    fetchAll<StatShare>(() => supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant").order("id") as unknown as Q),
+    fetchAll<StatAttendee>(() => supabase.from("juntada_attendees").select("juntada_id, member_id").order("juntada_id") as unknown as Q),
+    fetchAll<StatNet>(() => supabase.from("v_juntada_member_balances").select("juntada_id, member_id, net_cents").neq("net_cents", 0).order("juntada_id") as unknown as Q),
+    fetchAll<StatSettlement>(() => supabase.from("settlements").select("juntada_id, amount_cents").eq("status", "active").order("id") as unknown as Q),
+    supabase.from("categories").select("id, parent_id, code, name, kind"),
     supabase.from("profiles").select("id, status").in("status", ["active", "inactive"]),
   ]);
+  // Solo gastos de juntadas activas (los de juntadas anuladas también quedan anulados, pero por las dudas).
+  const active = new Set(juntadas.map((j) => j.id));
+  const g = gastos.filter((x) => active.has(x.juntada_id)).map((x) => ({ ...x, base_amount_cents: Number(x.base_amount_cents), fx_rate: Number(x.fx_rate) }));
+  const gIds = new Set(g.map((x) => x.id));
   return {
-    expenses: expenses.map((e) => ({ ...e, base_amount_cents: Number(e.base_amount_cents), fx_rate: Number(e.fx_rate) })),
-    shares: shares.map((s) => ({ ...s, amount_cents: Number(s.amount_cents), outstanding_cents: Number(s.outstanding_cents) })),
+    juntadas,
+    gastos: g,
+    shares: shares.filter((x) => gIds.has(x.expense_id)).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) })),
+    attendees: attendees.filter((a) => active.has(a.juntada_id)),
+    nets: nets.map((n) => ({ ...n, net_cents: Number(n.net_cents) })),
+    settlements: settlements.filter((x) => active.has(x.juntada_id)).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) })),
     categories: categories ?? [],
     members: members ?? [],
   };
@@ -69,7 +75,7 @@ export function parsePeriod(sp: PeriodParams, today: string): { filters: Filters
   // El promedio mensual no debe contar meses futuros del año en curso.
   if (to && to > today) to = today;
   return {
-    filters: { from, to, categoryId: sp.categoria || undefined, memberId: sp.integrante || undefined },
+    filters: { from, to, typeId: sp.categoria || undefined, memberId: sp.integrante || undefined },
     label,
     from,
     to,

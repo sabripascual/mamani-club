@@ -13,14 +13,14 @@ function friendly(msg: string) {
 }
 
 // Las policies de la tabla solo permiten escribir a admins; esto además corta antes.
-export async function addCategory(parentId: string | null, name: string, icon?: string): Promise<CatResult> {
+export async function addCategory(parentId: string | null, name: string, kind: "gasto" | "juntada" = "gasto", icon?: string): Promise<CatResult> {
   await requireAdmin();
   const supabase = await createClient();
-  const base = supabase.from("categories").select("sort_order");
+  const base = supabase.from("categories").select("sort_order").eq("kind", kind);
   const scoped = parentId ? base.eq("parent_id", parentId) : base.is("parent_id", null);
   const { data: last } = await scoped.order("sort_order", { ascending: false }).limit(1).maybeSingle();
   const { error } = await supabase.from("categories").insert({
-    parent_id: parentId, name: name.trim(), icon: parentId ? null : (icon ?? null), sort_order: (last?.sort_order ?? 0) + 1,
+    parent_id: parentId, kind, name: name.trim(), icon: parentId ? null : (icon ?? (kind === "juntada" ? "sparkles" : null)), sort_order: (last?.sort_order ?? 0) + 1,
   });
   if (error) return { ok: false, error: friendly(error.message) };
   revalidatePath("/", "layout");

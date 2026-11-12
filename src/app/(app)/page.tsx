@@ -5,7 +5,7 @@ import { MemoriesCarousel } from "@/components/photos/memories-carousel";
 import { PendingRequestsBanner } from "@/components/admin/pending-banner";
 import { pendingRequestsCount } from "@/lib/admin/pending";
 import { requireActiveMember } from "@/lib/auth/session";
-import { getCategories, getMemberBalances, getMembers, getRecentExpenses } from "@/lib/expenses/queries";
+import { getJuntadaTypes, getMemberBalances, getMembers, listJuntadas } from "@/lib/expenses/queries";
 import { RecentExpenses } from "@/components/expenses/recent-expenses";
 import { loadDataset, parsePeriod, type PeriodParams } from "@/lib/stats/load";
 import { formatMoney } from "@/lib/money/format";
@@ -28,7 +28,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const { profile } = await requireActiveMember();
   const today = todayAR();
   const [dataset, balances, { tree }, { members, byId }, albums, recent] = await Promise.all([
-    loadDataset(), getMemberBalances(profile.id), getCategories(), getMembers(), getAlbums({ limit: 12 }), getRecentExpenses(3),
+    loadDataset(), getMemberBalances(profile.id), getJuntadaTypes(), getMembers(), getAlbums({ limit: 12 }), listJuntadas({}, 3),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
   const [pendingRequests, myAvatar] = await Promise.all([
@@ -67,9 +67,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </Link>
       </div>
 
-      <div className="mb-8"><RecentExpenses items={recent} /></div>
+      <div className="mb-8"><RecentExpenses items={recent.map((j) => ({ id: j.id, title: j.title, occurred_on: j.occurred_on, settlement_status: j.summary?.settlement_status ?? "empty" }))} /></div>
 
-      {dataset.expenses.length === 0 ? (
+      {dataset.juntadas.length === 0 ? (
         <EmptyState icon={ReceiptText} title="Todavía no hay juntadas">
           Cuando carguen la primera, acá aparecen las cuentas y las estadísticas.
           <div className="mt-4">

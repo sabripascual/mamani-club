@@ -16,8 +16,8 @@ Estado: **propuesta para aprobar**. Nada implementado.
 
    CÓMO SALDAMOS (sugerido)
    Dani → Ana    $26.000   alias ana.mp     [Pagado]
-   Caro → Ana    $15.000   alias ana.mp     ✓ pagado el 15/3
-   Caro → Bea    $ 2.000   alias bea.uala   [Pagado]
+   Caro → Ana    $18.000   alias ana.mp     ✓ pagado el 15/3
+   Caro → Bea    $ 4.000   alias bea.uala   [Pagado]
 
    Tu saldo en esta juntada: debés $26.000
 ```

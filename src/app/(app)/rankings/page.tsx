@@ -75,7 +75,7 @@ export default async function RankingsPage({ searchParams }: { searchParams: Pro
   const { filters } = parsePeriod(sp, todayAR());
   // Los rankings comparan integrantes: no se filtran por integrante, solo por período.
   const ds = filterDataset(dataset, { from: filters.from, to: filters.to });
-  const list = rankings(memberStats(ds), ds.expenses.length);
+  const list = rankings(memberStats(ds), ds.juntadas.length);
 
   return (
     <>
@@ -83,11 +83,11 @@ export default async function RankingsPage({ searchParams }: { searchParams: Pro
         Calculados con las juntadas reales del período. Cada juntada cuenta una sola vez.
       </PageHeader>
       <PeriodFilter sp={sp} basePath="/rankings" categories={[]} members={members.map((m) => ({ id: m.id, name: displayName(m) }))} showCategory={false} showMember={false} />
-      {ds.expenses.length === 0 ? (
+      {ds.juntadas.length === 0 ? (
         <EmptyState icon={Trophy} title="Sin juntadas en este período">Probá con otro período o cargá juntadas.</EmptyState>
       ) : (
         <>
-          <p className="mb-4 text-sm text-graphite/60">{ds.expenses.length} {ds.expenses.length === 1 ? "juntada" : "juntadas"} en el período.</p>
+          <p className="mb-4 text-sm text-graphite/60">{ds.juntadas.length} {ds.juntadas.length === 1 ? "juntada" : "juntadas"} en el período.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {list.map((r) => <RankingCard key={r.key} r={r} byId={byId} me={profile.id} />)}
           </div>

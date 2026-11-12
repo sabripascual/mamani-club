@@ -20,7 +20,7 @@ export default async function AlbumPage({ params, searchParams }: { params: Prom
   if (!/^[0-9a-f-]{36}$/.test(expenseId)) notFound();
   const { profile } = await requireActiveMember();
   const supabase = await createClient();
-  const { data: expense } = await supabase.from("expenses").select("id, title, occurred_on, status").eq("id", expenseId).maybeSingle();
+  const { data: expense } = await supabase.from("juntadas").select("id, title, occurred_on, status").eq("id", expenseId).maybeSingle();
   if (!expense || expense.status !== "active") notFound();
   const [{ photos, total }, { members }] = await Promise.all([getAlbum(expenseId, profile.id), getMembers()]);
   const likes = photos.reduce((a, p) => a + p.likes, 0);
@@ -44,7 +44,7 @@ export default async function AlbumPage({ params, searchParams }: { params: Prom
       <div className="mb-5 flex flex-wrap items-start gap-2">
         <PhotoUploader expenseId={expenseId} />
         <Link href={`/gastos/${expenseId}`} className="inline-flex h-11 items-center gap-2 rounded-full bg-white/70 px-5 text-sm font-semibold ring-1 ring-graphite/10">
-          <ReceiptText className="size-4" /> Ver la cuenta
+          <ReceiptText className="size-4" /> Ver la juntada
         </Link>
       </div>
       {photos.length === 0 ? (

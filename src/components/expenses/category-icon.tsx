@@ -1,11 +1,11 @@
 import {
-  Utensils, Wine, PartyPopper, Trophy, Car, Cake, Plane, ShoppingBag, Sparkles, type LucideIcon,
+  Utensils, Wine, PartyPopper, Trophy, Car, Cake, Plane, ShoppingBag, Sparkles, Home, Beer, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, LucideIcon> = {
   utensils: Utensils, wine: Wine, "party-popper": PartyPopper, trophy: Trophy,
-  car: Car, cake: Cake, plane: Plane, "shopping-bag": ShoppingBag,
+  car: Car, cake: Cake, plane: Plane, "shopping-bag": ShoppingBag, home: Home, beer: Beer, sparkles: Sparkles,
 };
 
 export const CATEGORY_ICON_OPTIONS = Object.keys(ICONS);

@@ -18,9 +18,14 @@ const ACTION_LABELS: Record<string, string> = {
   member_status_changed: "Cambió el estado",
   role_changed: "Cambió el rol",
   temporary_password_set: "Generó contraseña temporal",
-  expense_created: "Cargó la juntada",
-  expense_updated: "Editó la juntada",
-  expense_voided: "Anuló la juntada",
+  juntada_created: "Creó la juntada",
+  juntada_updated: "Editó la juntada",
+  juntada_voided: "Anuló la juntada",
+  expense_created: "Cargó un gasto",
+  expense_updated: "Editó un gasto",
+  expense_voided: "Quitó un gasto",
+  settlement_created: "Registró una transferencia",
+  settlement_voided: "Deshizo una transferencia",
   payment_created: "Registró un pago",
   refund_created: "Registró un reintegro",
   payment_voided: "Deshizo un pago",
@@ -33,7 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ENTITY_LABELS: Record<string, string> = {
-  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", expenses: "Juntada", payments: "Pago", photos: "Foto", photo_comments: "Comentario", password_reset_requests: "Pedido de contraseña",
+  profiles: "Integrante", group_settings: "Configuración", categories: "Categoría", juntadas: "Juntada", expenses: "Gasto", payments: "Pago (histórico)", settlements: "Transferencia", photos: "Foto", photo_comments: "Comentario", password_reset_requests: "Pedido de contraseña",
 };
 
 const fmt = new Intl.DateTimeFormat("es-AR", {
@@ -110,8 +115,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                     <span className="text-graphite/60">
                       {ENTITY_LABELS[r.entity] ?? r.entity}
                       {r.entity === "profiles" && name.get(r.entity_id) ? `: ${name.get(r.entity_id)}` : ""}
-                      {r.entity === "expenses" && (r.new_values?.title || r.old_values?.title) ? `: ${String(r.new_values?.title ?? r.old_values?.title)}` : ""}
-                      {r.entity === "payments" && r.new_values?.amount_cents ? `: ${formatMoney(Number(r.new_values.amount_cents))}` : ""}
+                      {(r.entity === "expenses" || r.entity === "juntadas") && (r.new_values?.title || r.old_values?.title) ? `: ${String(r.new_values?.title ?? r.old_values?.title)}` : ""}
+                      {(r.entity === "payments" || r.entity === "settlements") && r.new_values?.amount_cents ? `: ${formatMoney(Number(r.new_values.amount_cents))}` : ""}
                     </span>
                   </p>
                   <time className="text-xs text-graphite/50">{fmt.format(new Date(r.occurred_at))}</time>
