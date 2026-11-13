@@ -182,3 +182,27 @@ export async function notifyLoadFinished(juntadaId: string, actorId: string) {
     }, s);
   }));
 }
+
+/** Se creó una juntada (sin gastos todavía): aviso a las asistentes, menos a quien la creó. */
+export async function notifyJuntadaCreated(juntadaId: string, actorId: string) {
+  if (!pushConfigured()) return;
+  const admin = createAdminClient();
+  const [{ data: j }, { data: att }, actor] = await Promise.all([
+    admin.from("juntadas").select("title, occurred_on").eq("id", juntadaId).single(),
+    admin.from("juntada_attendees").select("member_id").eq("juntada_id", juntadaId).neq("member_id", actorId),
+    nameOf(admin, actorId),
+  ]);
+  const ids = (att ?? []).map((a) => a.member_id as string);
+  if (!j || ids.length === 0) return;
+  const { data: subs } = await admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").in("member_id", ids);
+  const day = new Intl.DateTimeFormat("es-AR", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${j.occurred_on}T12:00:00Z`));
+  await Promise.all(ids.map((m) => {
+    const s = ((subs ?? []) as Sub[]).filter((x) => x.member_id === m);
+    return s.length ? sendToMember(m, {
+      title: `${actor} armó la juntada ${j.title} 🎉`,
+      body: `Es el ${day} y estás anotada. Cuando haya gastos te avisamos.`,
+      url: `/gastos/${juntadaId}`,
+      tag: `juntada-${juntadaId}`,
+    }, s) : 0;
+  }));
+}

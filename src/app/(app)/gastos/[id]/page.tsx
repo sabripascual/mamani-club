@@ -210,7 +210,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
       </section>
 
       {/* Quien cargó gastos cierra su carga: avisa a la juntada y vuelve al inicio. */}
-      {active && gastos.some((g) => g.created_by === me) && (
+      {active && (gastos.some((g) => g.created_by === me) || (j.created_by === me && gastos.length === 0)) && (
         <div className="-mt-4 mb-8"><FinishLoadingButton juntadaId={j.id} /></div>
       )}
 
