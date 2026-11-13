@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Check, Loader2, LogOut, Trash2, Undo2, UserPlus } from "lucide-react";
-import { joinJuntada, leaveJuntada, setGuestPaid, settleTransfer, voidGasto, voidJuntada, voidSettlement } from "@/lib/expenses/actions";
+import { Check, CheckCheck, Loader2, LogOut, Trash2, Undo2, UserPlus } from "lucide-react";
+import { finishLoading, joinJuntada, leaveJuntada, setGuestPaid, settleTransfer, voidGasto, voidJuntada, voidSettlement } from "@/lib/expenses/actions";
 import { celebrate } from "@/components/payment-celebration";
 import { cn } from "@/lib/utils";
 
@@ -169,5 +169,31 @@ export function VoidJuntadaButton({ juntadaId, disabled }: { juntadaId: string; 
       </button>
       {error && <span className="mt-1 text-xs text-rose-dark">{error}</span>}
     </span>
+  );
+}
+
+/** "Terminé de cargar": avisa a la juntada, celebra y vuelve al inicio. */
+export function FinishLoadingButton({ juntadaId }: { juntadaId: string }) {
+  const router = useRouter();
+  const { pending, error, run } = useAction();
+  return (
+    <div>
+      <button
+        onClick={() => run(async () => {
+          const res = await finishLoading(juntadaId);
+          if (res.ok) {
+            celebrate("¡Listo, reina!", `Terminaste de cargar ${res.title ?? "la juntada"}. Ya les avisamos a todas.`);
+            router.push("/");
+          }
+          return res;
+        })}
+        disabled={pending}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-graphite py-3.5 font-semibold text-cream shadow-lg shadow-graphite/20 transition active:scale-[0.99] disabled:opacity-60"
+      >
+        {pending ? <Loader2 className="size-5 animate-spin" /> : <CheckCheck className="size-5" />} Terminé de cargar
+      </button>
+      <p className="mt-1.5 text-center text-xs text-graphite/55">Avisa a todas las de la juntada y te lleva al inicio.</p>
+      {error && <p className="mt-1 text-center text-sm text-rose-dark">{error}</p>}
+    </div>
   );
 }

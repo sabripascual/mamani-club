@@ -18,6 +18,14 @@ export function ServiceWorker() {
       if (hadController) setUpdated(true); // en la primera instalación no hace falta avisar
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+    // Al tocar una notificación con la app abierta, el service worker nos pide ir a su pantalla.
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as { type?: string; url?: string } | null;
+      if (d?.type !== "mc:navigate" || !d.url) return;
+      const target = new URL(d.url, location.origin);
+      if (target.origin === location.origin) location.assign(target.href);
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
 
     navigator.serviceWorker.register("/sw.js").then((reg) => {
       reg.update().catch(() => {});
@@ -25,7 +33,10 @@ export function ServiceWorker() {
       document.addEventListener("visibilitychange", check);
     });
 
-    return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    return () => {
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      navigator.serviceWorker.removeEventListener("message", onMessage);
+    };
   }, []);
 
   if (!updated) return null;

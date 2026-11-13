@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { uploadPhotos } from "@/lib/photos/upload";
-import { refreshAlbum } from "@/lib/photos/actions";
+import { photosUploaded, refreshAlbum } from "@/lib/photos/actions";
 import { cn } from "@/lib/utils";
 
 export function PhotoUploader({ expenseId, variant = "primary" }: { expenseId: string; variant?: "primary" | "subtle" }) {
@@ -22,6 +22,7 @@ export function PhotoUploader({ expenseId, variant = "primary" }: { expenseId: s
     try {
       const res = await uploadPhotos(expenseId, files, (done, total) => setProgress({ done, total }));
       await refreshAlbum(expenseId);
+      if (res.ok > 0) photosUploaded(expenseId).catch(() => {});
       router.refresh();
       if (res.failed.length) {
         setMessage({ tone: "error", text: `${res.ok} subidas. No se pudieron subir: ${res.failed.map((f) => `${f.name} (${f.reason})`).join(", ")}` });

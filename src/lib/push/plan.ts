@@ -53,7 +53,7 @@ export function planNotifications(
     if (previous.some((l) => l.sent_on === today)) continue;
     const step = previous.length + 1;
     const msg = debtorMessage(step, d.title, money(d.outstanding_cents, d.currency));
-    out.push({ kind: "debtor", member_id: d.debtor_id, expense_id: d.expense_id, step, ...msg, url: `/gastos/${d.expense_id}`, tag: `deuda-${d.expense_id}` });
+    out.push({ kind: "debtor", member_id: d.debtor_id, expense_id: d.expense_id, step, ...msg, url: `/gastos/${d.expense_id}#saldar`, tag: `deuda-${d.expense_id}` });
   }
 
   // --- Quien adelantó: una resumida cada 2 días ---

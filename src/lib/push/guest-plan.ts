@@ -34,7 +34,7 @@ export function planGuestReminders(
       ref_id: d.share_id,
       title: `Tu invitada ${d.guest_name} sigue debiendo 🐀`,
       body: `Le debe ${money(d.amount_cents, d.currency)} a ${d.creditor_name} por ${d.juntada_title}. Cuando pague, marcalo en la juntada.`,
-      url: `/gastos/${d.juntada_id}`,
+      url: `/gastos/${d.juntada_id}#invitadas`,
       tag: `invitada-${d.share_id}`,
     }));
 }

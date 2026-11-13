@@ -21,9 +21,16 @@ describe("parseMoney", () => {
     ["120.000,50", 12000050],
     ["$ 1.500,5", 150050],
     ["0,99", 99],
+    // Teclado del teléfono con punto decimal:
+    ["1500.50", 150050],
+    ["99.5", 9950],
+    ["1.20", 120],
+    ["1.500", 150000], // 3 dígitos después del punto: es de miles
+    ["1.500.000", 150000000],
+    ["1.500.5", 150050],
   ])("%s → %i centavos", (input, cents) => expect(parseMoney(input)).toBe(cents));
 
-  it.each(["", "abc", "12,345", "1.20", "-100", "0"])("rechaza %s", (input) => expect(parseMoney(input)).toBeNull());
+  it.each(["", "abc", "12,345", "1.2.3", "-100", "0"])("rechaza %s", (input) => expect(parseMoney(input)).toBeNull());
 
   it("ida y vuelta con centsToInput", () => {
     expect(parseMoney(centsToInput(12000050))).toBe(12000050);
