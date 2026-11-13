@@ -5,7 +5,7 @@ import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCalendarRange } from "@/lib/calendar/queries";
 import { ensureHolidays } from "@/lib/calendar/holidays";
-import { arDate, arTime, RSVP_LABEL } from "@/lib/calendar/types";
+import { arDate, eventTimeLabel, RSVP_LABEL } from "@/lib/calendar/types";
 import { getJuntadaTypes } from "@/lib/expenses/queries";
 import { todayAR, formatMonth, formatDayLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -113,7 +113,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                           <CategoryIcon icon={t?.icon ?? null} index={i} size="sm" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-semibold">{e.title}</span>
-                            <span className="block truncate text-xs text-graphite/55">{arTime(e.starts_at)} h{e.location && ` · ${e.location}`} · {going(e.id)} van</span>
+                            <span className="block truncate text-xs text-graphite/55">{eventTimeLabel(e)}{e.location && ` · ${e.location}`} · {going(e.id)} van</span>
                           </span>
                           <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", mine === "going" ? "bg-lime" : mine === "maybe" ? "bg-powder" : mine === "no" ? "bg-graphite/10 text-graphite/60" : "bg-rose text-graphite")}>
                             {mine ? RSVP_LABEL[mine] : "¿Vas?"}

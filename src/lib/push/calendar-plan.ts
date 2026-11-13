@@ -62,7 +62,8 @@ export function planWeekly(today: string, recipients: string[], messages: Msg[],
   return recipients.map((r) => ({ kind: "weekly" as const, member_id: r, ref_id: m.id, title: m.title, body: m.body, url: "/", tag: "semanal" }));
 }
 
-export type EventInfo = { id: string; title: string; day: string; time: string; location: string | null; attendees: string[] };
+/** `time` = "21:00" o "21:00 a 02:00"; `allDay` = dura todo el día. */
+export type EventInfo = { id: string; title: string; day: string; time: string; allDay?: boolean; location: string | null; attendees: string[] };
 
 /** "eve": eventos de mañana (10:00). "day": eventos de hoy (8:00). */
 export function planEventReminders(today: string, events: EventInfo[], mode: "eve" | "day"): Planned[] {
@@ -72,7 +73,8 @@ export function planEventReminders(today: string, events: EventInfo[], mode: "ev
     if (e.day !== target) continue;
     const where = e.location ? ` en ${e.location}` : "";
     const title = mode === "eve" ? `Mañana: ${e.title}` : `Hoy: ${e.title} 🎉`;
-    const body = mode === "eve" ? `A las ${e.time} h${where}. ¿Seguís yendo?` : `A las ${e.time} h${where}. ¡Nos vemos!`;
+    const when = e.allDay ? "Todo el día" : `A las ${e.time} h`;
+    const body = mode === "eve" ? `${when}${where}. ¿Seguís yendo?` : `${when}${where}. ¡Nos vemos!`;
     for (const m of e.attendees) out.push({ kind: "event", member_id: m, ref_id: e.id, title, body, url: `/calendario/${e.id}`, tag: `evento-${e.id}` });
   }
   return out;

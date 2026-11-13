@@ -44,7 +44,7 @@ const refresh = (juntadaId?: string | null) => {
 // Gasto (dentro de una juntada)
 // ---------------------------------------------------------------------------
 const gastoSchema = z.object({
-  title: z.string().trim().min(1, "Elegí qué se compró").max(80),
+  title: z.string().trim().min(1, "Elegí qué pagaste").max(80),
   category_id: uuid.or(z.literal("")).refine((v) => v !== "", "Elegí una categoría"),
   subcategory_id: z.string().optional().transform((v) => v || null),
   description: z.string().trim().max(500).optional().transform((v) => v || null),

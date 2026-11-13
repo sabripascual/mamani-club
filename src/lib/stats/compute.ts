@@ -302,14 +302,9 @@ export const RANKING_DEFS: RankDef[] = [
     value: (s) => s.going + s.paidJuntadas, detail: (s) => `${s.going} “Voy” · ${s.paidJuntadas} juntadas con pagos` },
   { key: "ausente", title: "Fantasma 👻", description: "Eventos en los que puso “No voy” o no respondió + juntadas sin ningún pago suyo.", unit: "count", minTotal: 3, needsDifference: true,
     value: (s) => s.noShows + s.unpaidJuntadas, detail: (s) => `${s.noShows} sin ir o sin responder · ${s.unpaidJuntadas} juntadas sin pagos` },
-  { key: "fiestera", title: "La más fiestera", description: "Más juntadas de tipo “Salida / boliche”.", unit: "count", value: (s) => s.fiestas },
   { key: "tercer_tiempo", title: "La reina del tercer tiempo", description: "Más juntadas de tipo “Tercer tiempo”.", unit: "count", value: (s) => s.tercerTiempo },
-  { key: "adelanto", title: "La que más plata adelantó", description: "Total de gastos que pagó por el grupo (no es su consumo).", unit: "money",
-    value: (s) => s.advancedCents, detail: (s) => `pagó ${s.timesPaid} ${s.timesPaid === 1 ? "gasto" : "gastos"}` },
   { key: "gastadora", title: "¿De qué vive??", description: "Suma de todos sus gastos registrados (su parte en cada gasto).", unit: "money", value: (s) => s.consumedCents },
   { key: "creadora", title: "La que más gastos cargó", description: "Gastos registrados por ella en la app.", unit: "count", value: (s) => s.created },
-  { key: "promedio", title: "La que más consumió en promedio", description: "Consumo promedio por juntada a la que fue.", unit: "money",
-    value: (s) => s.avgConsumedCents, detail: (s) => `${s.participations} juntadas` },
   { key: "deudora", title: "El roedor", description: "Mayor saldo total adeudado hoy.", unit: "money", value: (s) => s.pendingCents },
 ];
 

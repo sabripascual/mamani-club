@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, ReceiptText } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getEvent } from "@/lib/calendar/queries";
-import { arDate, arTime, RSVP_LABEL, type Rsvp } from "@/lib/calendar/types";
+import { arDate, eventTimeLabel, RSVP_LABEL, type Rsvp } from "@/lib/calendar/types";
 import { getJuntadaTypes, getMembers } from "@/lib/expenses/queries";
 import { formatDayLong } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
@@ -36,7 +36,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-dark">{type?.name}</p>
           <h1 className="mt-1 font-display text-[1.9rem] leading-tight font-semibold">{e.title}</h1>
-          <p className="mt-1 text-sm text-graphite/60 first-letter:uppercase">{formatDayLong(arDate(e.starts_at))} · {arTime(e.starts_at)} h</p>
+          <p className="mt-1 text-sm text-graphite/60 first-letter:uppercase">{formatDayLong(arDate(e.starts_at))} · {eventTimeLabel(e)}</p>
           {e.location && <MapsLink location={e.location} />}
         </div>
         {canManage && !e.juntada_id && (
