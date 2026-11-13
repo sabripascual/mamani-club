@@ -23,7 +23,8 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     <>
       <PageHeader eyebrow="Editar evento" title={e.title} />
       <EventForm action={updateEvent.bind(null, id)} types={tree} today={todayAR()}
-        initial={{ title: e.title, date: arDate(e.starts_at), time: e.all_day ? "21:00" : arTime(e.starts_at), end_time: e.ends_at ? arTime(e.ends_at) : "",
+        initial={{ title: e.title, date: arDate(e.starts_at), time: e.all_day ? "21:00" : arTime(e.starts_at),
+          end_date: e.ends_at ? arDate(e.ends_at) : arDate(e.starts_at), end_time: e.ends_at && !e.all_day ? arTime(e.ends_at) : "",
           all_day: e.all_day, type_id: e.type_id, location: e.location, description: e.description }} />
     </>
   );

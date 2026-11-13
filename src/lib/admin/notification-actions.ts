@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/session";
 import { pushConfigured } from "@/lib/push/send";
 import { sendBroadcast } from "@/lib/push/calendar-daily";
+import { runDailyNotifications } from "@/lib/push/daily";
+import { logCronRun } from "@/lib/push/cron-log";
 
 export type NResult = { ok: boolean; error?: string; sent?: number };
 type Kind = "weekly" | "birthday" | "birthday_week" | "event_new";
@@ -48,4 +50,24 @@ export async function broadcast(title: string, body: string, recipients: string[
   const sent = await sendBroadcast(ids, title.trim().slice(0, 80), body.trim().slice(0, 200), safeUrl);
   revalidatePath("/admin/notificaciones");
   return { ok: true, sent };
+}
+
+/**
+ * Corre ahora los recordatorios de deuda (lo mismo que el cron de las 10:00). No duplica:
+ * cada aviso se manda una sola vez por día aunque se corra varias veces.
+ */
+export async function runDebtRemindersNow(): Promise<NResult & { planned?: number }> {
+  await requireAdmin();
+  if (!pushConfigured()) return { ok: false, error: "Faltan las claves de notificaciones en Vercel." };
+  try {
+    const r = await runDailyNotifications();
+    await logCronRun("manual", { ok: true, planned: r.planned, sent: r.sent });
+    revalidatePath("/admin/notificaciones");
+    return { ok: true, sent: r.sent, planned: r.planned };
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : "desconocido";
+    await logCronRun("manual", { ok: false, detail });
+    revalidatePath("/admin/notificaciones");
+    return { ok: false, error: `No se pudo correr: ${detail}` };
+  }
 }

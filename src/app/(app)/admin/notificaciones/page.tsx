@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getMembers } from "@/lib/expenses/queries";
 import { displayName } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { BroadcastForm, MessagePool } from "./panel-client";
+import { BroadcastForm, MessagePool, RunRemindersButton } from "./panel-client";
 
 export const metadata: Metadata = { title: "Notificaciones · MAMANÍ CLUB" };
 
@@ -16,12 +16,17 @@ const fmt = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buen
 
 export default async function NotificationsPanel() {
   const supabase = await createClient();
-  const [{ data: messages }, { data: log }, { members, byId }, { count: devices }] = await Promise.all([
+  const [{ data: messages }, { data: log }, { members, byId }, { count: devices }, { data: runs }] = await Promise.all([
     supabase.from("notification_messages").select("id, kind, title, body, active").order("created_at"),
     supabase.from("notification_log").select("id, kind, member_id, title, body, devices, created_at").order("created_at", { ascending: false }).limit(60),
     getMembers(),
     supabase.from("push_subscriptions").select("id", { count: "exact", head: true }),
+    supabase.from("cron_runs").select("id, job, ran_at, ok, planned, sent, detail").order("ran_at", { ascending: false }).limit(8),
   ]);
+  // ¿Corrió el aviso de las 10:00 en las últimas 26 horas?
+  const lastDaily = (runs ?? []).find((r) => r.job === "diario" && r.ok);
+  const dailyStale = !lastDaily || Date.now() - new Date(lastDaily.ran_at).getTime() > 26 * 3_600_000;
+  const lastFailure = (runs ?? []).find((r) => !r.ok);
   const by = (k: string) => (messages ?? []).filter((m) => m.kind === k);
 
   return (
@@ -31,6 +36,33 @@ export default async function NotificationsPanel() {
         Mensajes que manda la app solos y envíos manuales. Solo llegan a quienes activaron las notificaciones en su perfil
         (hoy hay {devices ?? 0} {devices === 1 ? "dispositivo" : "dispositivos"}).
       </p>
+
+      <h2 className="mb-2 font-display text-xl">Avisos automáticos</h2>
+      <Card className="mb-8">
+        {dailyStale ? (
+          <div className="mb-4 rounded-2xl bg-rose/20 p-3 text-sm">
+            <p className="font-semibold">Los recordatorios de las 10:00 no corrieron en el último día.</p>
+            <p className="mt-1 text-graphite/70">
+              {lastFailure?.detail ?? "Revisá en Vercel que la variable CRON_SECRET esté cargada y que el último deploy esté en producción."}
+            </p>
+          </div>
+        ) : (
+          <p className="mb-4 rounded-2xl bg-lime/50 p-3 text-sm">✓ Los recordatorios de las 10:00 están corriendo.</p>
+        )}
+        <ul className="mb-4 flex flex-col gap-1.5 text-sm">
+          {(runs ?? []).length === 0 && <li className="text-graphite/55">Todavía no hay corridas registradas.</li>}
+          {(runs ?? []).map((r) => (
+            <li key={r.id} className="flex items-start justify-between gap-3">
+              <span className="min-w-0">
+                <span className="font-semibold">{r.job === "diario" ? "10:00 · deudas y eventos" : r.job === "manana" ? "8:00 · cumples y frases" : "Manual"}</span>
+                <span className="block text-xs text-graphite/55">{fmt.format(new Date(r.ran_at))}{r.detail ? ` · ${r.detail}` : ""}</span>
+              </span>
+              <span className={r.ok ? "shrink-0 text-graphite/70" : "shrink-0 font-semibold text-rose-dark"}>{r.ok ? `${r.sent}/${r.planned} enviados` : "Falló"}</span>
+            </li>
+          ))}
+        </ul>
+        <RunRemindersButton />
+      </Card>
 
       <h2 className="mb-2 font-display text-xl">Enviar ahora</h2>
       <Card className="mb-8"><BroadcastForm members={members.filter((m) => m.status === "active").map((m) => ({ id: m.id, name: displayName(m) }))} /></Card>

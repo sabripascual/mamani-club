@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { ReceiptText } from "lucide-react";
+import { ChevronRight, ReceiptText } from "lucide-react";
 import { getAlbums } from "@/lib/photos/queries";
 import { MemoriesCarousel } from "@/components/photos/memories-carousel";
 import { PendingRequestsBanner } from "@/components/admin/pending-banner";
 import { pendingRequestsCount } from "@/lib/admin/pending";
 import { requireActiveMember } from "@/lib/auth/session";
-import { getJuntadaTypes, getMemberBalances, getMembers, listJuntadas } from "@/lib/expenses/queries";
+import { getMemberBalances, getMembers, listJuntadas } from "@/lib/expenses/queries";
 import { RecentExpenses } from "@/components/expenses/recent-expenses";
+import { createClient } from "@/lib/supabase/server";
 import { birthdaysToday } from "@/lib/calendar/queries";
 import { CalendarDays, Images, Trophy } from "lucide-react";
-import { loadDataset, parsePeriod, type PeriodParams } from "@/lib/stats/load";
+import { loadDataset, parseYearMonth, type PeriodParams } from "@/lib/stats/load";
 import { formatMoney } from "@/lib/money/format";
 import { todayAR } from "@/lib/dates";
 import { displayName } from "@/lib/utils";
@@ -20,7 +21,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { signAvatarUrls } from "@/lib/storage/avatars";
 import { initials } from "@/lib/utils";
 import { InstallHint } from "@/components/pwa/install-hint";
-import { PeriodFilter } from "@/components/stats/period-filter";
+import { YearMonthFilter } from "@/components/stats/year-month-filter";
 import { Dashboard } from "@/components/stats/dashboard";
 import { PersonalDashboard } from "@/components/stats/personal-dashboard";
 import { ViewToggle } from "@/components/stats/view-toggle";
@@ -29,16 +30,22 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const { profile } = await requireActiveMember();
   const today = todayAR();
-  const [dataset, balances, { tree }, { members, byId }, albums, recent] = await Promise.all([
-    loadDataset(), getMemberBalances(profile.id), getJuntadaTypes(), getMembers(), getAlbums({ limit: 12 }), listJuntadas({}, 3),
+  const [dataset, balances, { byId }, albums, recent] = await Promise.all([
+    loadDataset(), getMemberBalances(profile.id), getMembers(), getAlbums({ limit: 12 }), listJuntadas({}, 3),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
+  // ¿Fui a las últimas juntadas? (para pintarlas distinto en la lista)
+  const supabase = await createClient();
+  const { data: myAtt } = recent.length
+    ? await supabase.from("juntada_attendees").select("juntada_id").eq("member_id", profile.id).in("juntada_id", recent.map((j) => j.id))
+    : { data: [] };
+  const attended = new Set((myAtt ?? []).map((a) => a.juntada_id as string));
   const [pendingRequests, myAvatar, cumples] = await Promise.all([
     profile.role === "admin" ? pendingRequestsCount() : Promise.resolve(0),
     signAvatarUrls([profile.avatar_path]).then((m) => (profile.avatar_path ? (m.get(profile.avatar_path) ?? null) : null)),
     birthdaysToday(today),
   ]);
-  const { filters } = parsePeriod(sp, today);
+  const { year, month, filters } = parseYearMonth(sp, today);
 
   return (
     <>
@@ -86,17 +93,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <Card className="h-full bg-rose/20 transition hover:bg-rose/30">
             <p className="text-sm text-graphite/65">Debés</p>
             <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(mine?.i_owe_cents ?? 0)}</p>
+            <p className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold text-rose-dark">Ver detalle <ChevronRight className="size-3.5" /></p>
           </Card>
         </Link>
         <Link href="/gastos/balances">
           <Card className="h-full bg-powder/45 transition hover:bg-powder/60">
             <p className="text-sm text-graphite/65">Te deben</p>
             <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(mine?.owed_to_me_cents ?? 0)}</p>
+            <p className="mt-1 inline-flex items-center gap-0.5 text-xs font-semibold text-rose-dark">Ver detalle <ChevronRight className="size-3.5" /></p>
           </Card>
         </Link>
       </div>
 
-      <div className="mb-8"><RecentExpenses items={recent.map((j) => ({ id: j.id, title: j.title, occurred_on: j.occurred_on, settlement_status: j.summary?.settlement_status ?? "empty" }))} /></div>
+      <div className="mb-8"><RecentExpenses items={recent.map((j) => ({ id: j.id, title: j.title, occurred_on: j.occurred_on, settlement_status: j.summary?.settlement_status ?? "empty", attended: attended.has(j.id) }))} /></div>
 
       {dataset.juntadas.length === 0 ? (
         <EmptyState icon={ReceiptText} title="Todavía no hay juntadas">
@@ -108,7 +117,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ) : (
         <>
           <ViewToggle sp={sp} current={sp.vista === "yo" ? "yo" : "grupo"} />
-          <PeriodFilter sp={sp} basePath="/" categories={tree} members={members.map((m) => ({ id: m.id, name: displayName(m) }))} showMember={sp.vista !== "yo"} />
+          <YearMonthFilter year={year} month={month} basePath="/" vista={sp.vista} />
           {sp.vista === "yo" ? (
             <PersonalDashboard dataset={dataset} filters={filters} today={today} memberId={profile.id} />
           ) : (

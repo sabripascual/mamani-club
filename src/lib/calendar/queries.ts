@@ -10,7 +10,10 @@ export async function getCalendarRange(from: string, to: string, me: string) {
   const supabase = await createClient();
   const [{ data: events }, { data: profiles }, { data: holidays }] = await Promise.all([
     supabase.from("events").select(EVENT_COLS).eq("status", "active")
-      .gte("starts_at", `${from}T00:00:00-03:00`).lte("starts_at", `${to}T23:59:59-03:00`).order("starts_at").returns<CalendarEvent[]>(),
+      // Los que se cruzan con el período: empiezan antes del fin y terminan (o empiezan) después del inicio.
+      .lte("starts_at", `${to}T23:59:59-03:00`)
+      .or(`starts_at.gte.${from}T00:00:00-03:00,ends_at.gte.${from}T00:00:00-03:00`)
+      .order("starts_at").returns<CalendarEvent[]>(),
     supabase.from("profiles").select("id, first_name, nickname, birth_date").eq("status", "active").not("birth_date", "is", null),
     supabase.from("holidays").select("day, name, kind").gte("day", from).lte("day", to).order("day").returns<Holiday[]>(),
   ]);

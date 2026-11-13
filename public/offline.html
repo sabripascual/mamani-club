@@ -3,20 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F8F5F0">
 <title>Sin conexión · MAMANÍ CLUB</title>
 <style>
-  body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#F8F5F0;color:#38333B;font-family:system-ui,sans-serif;text-align:center;padding:24px}
-  h1{font-family:Georgia,serif;font-size:2rem;margin:.5rem 0}
-  p{opacity:.7;max-width:22rem;margin:0 auto}
-  button{margin-top:2rem;height:48px;padding:0 24px;border:0;border-radius:999px;background:#38333B;color:#F8F5F0;font-weight:600;font-size:15px}
-  .dot{display:inline-block;width:72px;height:72px;border-radius:50%;background:#FA53BA;box-shadow:0 0 0 8px #EDFE73}
+  /* Fuentes y logo guardados por el service worker: se ven aunque no haya internet. */
+  @font-face { font-family: "Fredoka"; src: url(/fonts/fredoka-latin.woff2) format("woff2"); font-weight: 300 700; font-display: swap; }
+  @font-face { font-family: "Nunito"; src: url(/fonts/nunito-latin.woff2) format("woff2"); font-weight: 200 1000; font-display: swap; }
+  :root { --cream: #F8F5F0; --graphite: #38333B; --rose: #FA53BA; --rose-dark: #C81A84; --lime: #EDFE73; }
+  * { box-sizing: border-box; }
+  html, body { overflow-x: clip; overscroll-behavior: none; }
+  body {
+    margin: 0; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    background: var(--cream); color: var(--graphite); text-align: center;
+    font-family: "Nunito", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  }
+  main { max-width: 22rem; }
+  .logo { display: block; width: 200px; height: auto; margin: 0 auto 28px; }
+  .icon {
+    display: flex; align-items: center; justify-content: center; margin: 0 auto;
+    width: 88px; height: 88px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 0 8px var(--lime), 0 14px 30px rgba(250, 83, 186, .3);
+  }
+  .eyebrow { margin: 26px 0 0; font-size: 12px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--rose-dark); }
+  h1 { font-family: "Fredoka", "Nunito", system-ui, sans-serif; font-weight: 600; font-size: 2rem; line-height: 1.1; margin: 4px 0 10px; }
+  p { margin: 0 auto; color: rgba(56, 51, 59, .7); line-height: 1.45; }
+  button {
+    margin-top: 28px; width: 100%; height: 52px; border: 0; border-radius: 999px; cursor: pointer;
+    background: var(--lime); color: var(--graphite); font: 600 16px "Nunito", system-ui, sans-serif;
+    box-shadow: 0 0 0 4px var(--rose), 0 10px 24px rgba(250, 83, 186, .25);
+  }
+  button:active { transform: scale(.99); }
 </style>
 </head>
 <body>
   <main>
-    <span class="dot"></span>
+    <img class="logo" src="/brand/wordmark-sm.png" alt="Mamaní Club">
+    <span class="icon" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#38333B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/>
+        <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 13a10 10 0 0 1 5.24-2.76"/><path d="M12 20h.01"/>
+      </svg>
+    </span>
+    <p class="eyebrow">Uy, perrita</p>
     <h1>Sin conexión</h1>
-    <p>Las cuentas y las fotos se guardan en el servidor, así que necesitás internet para verlas. Probá de nuevo en un rato.</p>
+    <p>Las cuentas y las fotos están en el servidor, así que necesitás internet para verlas. Probá de nuevo en un ratito.</p>
     <button onclick="location.reload()">Reintentar</button>
   </main>
 </body>

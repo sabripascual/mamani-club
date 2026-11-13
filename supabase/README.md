@@ -22,7 +22,8 @@
 | 0011_invitadas_pagan_y_avisos.sql | Las invitadas pagan lo suyo, alias de devolución por gasto, aviso de evento nuevo | ✅ |
 | 0012_quien_pago_y_frases.sql | Quien pagó puede editar y quitar su gasto; frases de evento nuevo sin repetir | ✅ |
 | 0013_eventos_horario.sql | Eventos de todo el día y con hora de fin | ✅ |
-| 0014_roedor.sql | Cantidad de avisos de deuda enviados por integrante (ranking "El roedor") | ⏳ |
+| 0014_roedor.sql | Cantidad de avisos de deuda enviados por integrante (ranking "El roedor") | ✅ |
+| 0015_eventos_desde_hasta_y_cron.sql | Eventos desde/hasta (varios días) y registro de corridas del cron | ⏳ |
 
 ## Correr las pruebas localmente
 

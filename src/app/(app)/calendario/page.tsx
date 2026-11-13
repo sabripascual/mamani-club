@@ -5,7 +5,7 @@ import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCalendarRange } from "@/lib/calendar/queries";
 import { ensureHolidays } from "@/lib/calendar/holidays";
-import { arDate, eventTimeLabel, RSVP_LABEL } from "@/lib/calendar/types";
+import { eventDays, eventTimeLabel, RSVP_LABEL } from "@/lib/calendar/types";
 import { getJuntadaTypes } from "@/lib/expenses/queries";
 import { todayAR, formatMonth, formatDayLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   const byDay = new Map<string, { events: typeof events; birthdays: typeof birthdays; holidays: typeof holidays }>();
   const slot = (d: string) => { if (!byDay.has(d)) byDay.set(d, { events: [], birthdays: [], holidays: [] }); return byDay.get(d)!; };
-  for (const e of events) slot(arDate(e.starts_at)).events.push(e);
+  // Un evento de varios días aparece en cada día que dura (dentro del mes).
+  for (const e of events) for (const d of eventDays(e)) if (d >= from && d <= to) slot(d).events.push(e);
   for (const b of birthdays) slot(b.day).birthdays.push(b);
   for (const h of holidays) slot(h.day).holidays.push(h);
 

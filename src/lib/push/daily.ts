@@ -15,12 +15,14 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
 
   // Deudas = transferencias pendientes de cada juntada (pago neto, estilo Tricount)
   // + partes de invitadas sin pagar (cada invitada le paga a quien pagó su gasto).
-  const [{ data: transfers }, { data: guestDebts }, { data: subs }, { data: log }] = await Promise.all([
+  const [{ data: transfers, error: e1 }, { data: guestDebts, error: e2 }, { data: subs, error: e3 }, { data: log, error: e4 }] = await Promise.all([
     admin.from("v_pending_transfers").select("juntada_id, currency, from_member, to_member, amount_cents"),
     admin.from("v_guest_debts").select("share_id, juntada_id, currency, guest_name, responsible_id, creditor_id, amount_cents, created_at").is("guest_paid_at", null),
     admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth"),
     admin.from("notification_log").select("kind, member_id, juntada_id, sent_on").gte("sent_on", new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10)),
   ]);
+  const failed = e1 ?? e2 ?? e3 ?? e4;
+  if (failed) throw new Error(`No se pudieron leer las deudas: ${failed.message}`);
   if (!transfers?.length && !guestDebts?.length) return { planned: 0, sent: 0 };
 
   const ids = [...new Set([...(transfers ?? []), ...(guestDebts ?? [])].map((t) => t.juntada_id as string))];

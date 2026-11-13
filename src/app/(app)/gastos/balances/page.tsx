@@ -47,8 +47,7 @@ export default async function BalancesPage() {
       {currencies.map((cur) => {
         const curDebts = debts.filter((d) => d.currency === cur).sort((a, b) => b.amount_cents - a.amount_cents);
         const suggested = simplifyDebts(curDebts.map((d) => ({ from: d.debtor_id, to: d.creditor_id, amount: d.amount_cents })));
-        const curBalances = balances.filter((b) => b.currency === cur).sort((a, b) => b.advanced_cents - a.advanced_cents);
-        const mine = curBalances.find((b) => b.member_id === me);
+        const mine = balances.find((b) => b.currency === cur && b.member_id === me);
         const pendingTotal = curDebts.reduce((a, d) => a + d.amount_cents, 0);
 
         return (
@@ -116,36 +115,6 @@ export default async function BalancesPage() {
               </Card>
             )}
 
-            <h3 className="mb-3 font-display text-xl">Por integrante</h3>
-            <div className="overflow-x-auto rounded-[var(--radius-card)] bg-white/60">
-              <table className="w-full min-w-[34rem] text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-graphite/55">
-                    <th className="px-4 py-3 font-semibold">Integrante</th>
-                    <th className="px-3 py-3 text-right font-semibold">Adelantó</th>
-                    <th className="px-3 py-3 text-right font-semibold">Consumió</th>
-                    <th className="px-3 py-3 text-right font-semibold">Le deben</th>
-                    <th className="px-4 py-3 text-right font-semibold">Debe</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-graphite/5">
-                  {curBalances.map((b) => (
-                    <tr key={b.member_id} className={b.member_id === me ? "bg-blush/30" : undefined}>
-                      <td className="px-4 py-2.5">
-                        <span className="flex items-center gap-2"><MemberAvatar m={byId.get(b.member_id)} />{memberName(byId.get(b.member_id), me)}</span>
-                      </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(b.advanced_cents, cur)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(b.consumed_cents, cur)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{b.owed_to_me_cents ? formatMoney(b.owed_to_me_cents, cur) : "—"}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{b.i_owe_cents ? formatMoney(b.i_owe_cents, cur) : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-xs text-graphite/50">
-              <strong>Adelantó</strong>: plata que puso por el grupo. <strong>Consumió</strong>: su parte en los gastos de los que participó.
-            </p>
           </section>
         );
       })}

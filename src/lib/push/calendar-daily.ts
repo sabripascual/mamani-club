@@ -42,7 +42,9 @@ async function eventInfos(fromDay: string, toDay: string) {
     ? await admin.from("event_rsvps").select("event_id, member_id, response").in("event_id", ids).in("response", ["going", "maybe"])
     : { data: [] };
   return (events ?? []).map((e) => ({
-    id: e.id as string, title: e.title as string, day: AR.format(new Date(e.starts_at)), time: ARTIME.format(new Date(e.starts_at)) + (e.ends_at ? ` a ${ARTIME.format(new Date(e.ends_at))}` : ""), allDay: !!e.all_day,
+    id: e.id as string, title: e.title as string, day: AR.format(new Date(e.starts_at)), time: ARTIME.format(new Date(e.starts_at))
+      + (e.ends_at && e.ends_at !== e.starts_at && AR.format(new Date(e.ends_at)) === AR.format(new Date(e.starts_at)) ? ` a ${ARTIME.format(new Date(e.ends_at))}` : ""),
+    allDay: !!e.all_day,
     location: e.location as string | null, attendees: (rsvps ?? []).filter((r) => r.event_id === e.id).map((r) => r.member_id as string),
   }));
 }

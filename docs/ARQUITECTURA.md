@@ -334,6 +334,18 @@ tests/e2e/             Playwright
   de confirmación y vuelta al inicio). Crear una juntada (o convertir un evento) lleva a
   `/gastos/[id]/creada` con el resumen, "Agregar gasto" y "Finalizar e ir al inicio"; finalizar
   avisa a las de la juntada (con gastos: cuánto debe cada una; sin gastos: que se armó).
+- **ADR-034** Eventos "desde / hasta" (migración 0015): fecha + hora de inicio y de fin, fin
+  igual o posterior al inicio, pueden durar varios días (también los de todo el día: 00:00 del
+  primero a 23:59 del último). El calendario muestra el evento en cada día que dura.
+- **ADR-035** Diagnóstico de los avisos automáticos: cada corrida del cron queda en `cron_runs`
+  (cuántos tocaba mandar, cuántos llegaron o por qué falló, incluido "falta CRON_SECRET") y se
+  ve en Admin → Notificaciones, con un botón para mandar los recordatorios de deuda a mano.
+  **Requisito en Vercel:** variable `CRON_SECRET` (Production); Vercel la manda al cron como
+  `Authorization: Bearer …`. Sin ella, todas las corridas se rechazan.
+- **ADR-036** Pantalla sin conexión con la marca: Fredoka y Nunito (subconjunto latino, licencia
+  OFL) y el logo se guardan en `public/` y el service worker los precachea (v5).
+- **ADR-037** Inicio: solo Grupo/Yo + año y mes (por defecto, los actuales). Balances: solo
+  "Quién le debe a quién".
 
 ## 10. Riesgos y limitaciones conocidas
 

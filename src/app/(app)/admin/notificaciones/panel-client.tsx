@@ -2,8 +2,8 @@
 
 import { actionButtonClass } from "@/components/ui/action-card";
 import { useState, useTransition } from "react";
-import { Eye, EyeOff, Plus, Send, Trash2 } from "lucide-react";
-import { addMessage, broadcast, deleteMessage, toggleMessage, type NResult } from "@/lib/admin/notification-actions";
+import { BellRing, Eye, EyeOff, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { addMessage, broadcast, deleteMessage, runDebtRemindersNow, toggleMessage, type NResult } from "@/lib/admin/notification-actions";
 import { cn } from "@/lib/utils";
 
 type Msg = { id: string; title: string; body: string; active: boolean };
@@ -88,5 +88,22 @@ export function BroadcastForm({ members }: { members: { id: string; name: string
       </button>
       {msg && <p className={cn("text-sm", msg.tone === "error" ? "text-rose-dark" : "text-graphite/70")}>{msg.text}</p>}
     </form>
+  );
+}
+
+/** Manda ahora los recordatorios de deuda del día (no duplica los que ya salieron hoy). */
+export function RunRemindersButton() {
+  const { pending, msg, run } = useRun();
+  return (
+    <div>
+      <button disabled={pending} onClick={() => run(() => runDebtRemindersNow(), (r) => {
+        const x = r as NResult & { planned?: number };
+        return x.planned ? `Listo: ${x.sent ?? 0} de ${x.planned} avisos llegaron a algún dispositivo.` : "No había recordatorios pendientes para hoy.";
+      })}
+        className="inline-flex h-11 items-center gap-2 rounded-full bg-graphite px-5 text-sm font-semibold text-cream disabled:opacity-50">
+        {pending ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} Mandar recordatorios de deuda ahora
+      </button>
+      {msg && <p className={cn("mt-2 text-sm", msg.tone === "error" ? "text-rose-dark" : "text-graphite/70")}>{msg.text}</p>}
+    </div>
   );
 }
