@@ -4,6 +4,7 @@ import { runDailyNotifications } from "@/lib/push/daily";
 import { pushConfigured } from "@/lib/push/send";
 import { runEventEve } from "@/lib/push/calendar-daily";
 import { ensureHolidays } from "@/lib/calendar/holidays";
+import { cronAuthorized, logCronRun } from "@/lib/push/cron-log";
 
 export const maxDuration = 60;
 
@@ -14,21 +15,29 @@ export const maxDuration = 60;
  *  3. manda las notificaciones de deudas y los recordatorios de eventos de mañana.
  */
 export async function GET(request: Request) {
-  if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!(await cronAuthorized(request, "diario"))) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { error } = await createAdminClient().from("group_settings").select("id").limit(1);
-  if (error) return NextResponse.json({ ok: false, step: "keepalive" }, { status: 500 });
+  if (error) {
+    await logCronRun("diario", { ok: false, detail: "No se pudo conectar con la base." });
+    return NextResponse.json({ ok: false, step: "keepalive" }, { status: 500 });
+  }
   // Feriados del año (y del siguiente, desde diciembre).
   const now = new Date();
   await ensureHolidays(now.getUTCFullYear());
   if (now.getUTCMonth() === 11) await ensureHolidays(now.getUTCFullYear() + 1);
-  if (!pushConfigured()) return NextResponse.json({ ok: true, push: "sin claves VAPID" });
+  if (!pushConfigured()) {
+    await logCronRun("diario", { ok: false, detail: "Faltan las claves VAPID en Vercel." });
+    return NextResponse.json({ ok: true, push: "sin claves VAPID" });
+  }
   try {
     const result = await runDailyNotifications();
     const eve = await runEventEve();
+    await logCronRun("diario", { ok: true, planned: result.planned + eve.planned, sent: result.sent + eve.sent });
     return NextResponse.json({ ok: true, ...result, eventos: eve });
-  } catch {
+  } catch (e) {
+    await logCronRun("diario", { ok: false, detail: `Error al mandar: ${e instanceof Error ? e.message : "desconocido"}` });
     return NextResponse.json({ ok: false, step: "push" }, { status: 500 });
   }
 }

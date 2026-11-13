@@ -4,9 +4,9 @@ import { formatDay } from "@/lib/dates";
 import type { SettlementStatus } from "@/lib/expenses/types";
 import { StatusChip } from "./status-chip";
 
-type Item = { id: string; title: string; occurred_on: string; settlement_status: SettlementStatus };
+type Item = { id: string; title: string; occurred_on: string; settlement_status: SettlementStatus; attended?: boolean };
 
-/** Las últimas juntadas en versión compacta: nombre y estado, con "Ver más". */
+/** Las últimas juntadas en versión compacta: nombre, estado y si fui (color), con "Ver más". */
 export function RecentExpenses({ items }: { items: Item[] }) {
   if (items.length === 0) return null;
   return (
@@ -21,6 +21,8 @@ export function RecentExpenses({ items }: { items: Item[] }) {
         {items.map((e) => (
           <li key={e.id}>
             <Link href={`/gastos/${e.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-white">
+              <span aria-label={e.attended ? "Fuiste" : "No fuiste"} title={e.attended ? "Fuiste" : "No fuiste"}
+                className={`h-9 w-1.5 shrink-0 rounded-full ${e.attended ? "bg-rose" : "bg-graphite/15"}`} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold">{e.title}</span>
                 <span className="text-xs text-graphite/50">{formatDay(e.occurred_on)}</span>
@@ -31,6 +33,10 @@ export function RecentExpenses({ items }: { items: Item[] }) {
           </li>
         ))}
       </ul>
+      <p className="mt-2 flex gap-4 text-xs text-graphite/55">
+        <span className="flex items-center gap-1.5"><span className="h-3 w-1.5 rounded-full bg-rose" /> Fuiste</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-1.5 rounded-full bg-graphite/15" /> No fuiste</span>
+      </p>
     </section>
   );
 }

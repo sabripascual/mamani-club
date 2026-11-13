@@ -61,6 +61,19 @@ const isDate = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 /** Traduce los parámetros de la URL a filtros + descripción del período. */
 export function parsePeriod(sp: PeriodParams, today: string): { filters: Filters; label: string; from?: string; to?: string } {
+  return parseRange(sp, today);
+}
+
+/** Inicio: año y mes, con el año y el mes actuales por defecto ("mes=0" = todo el año). */
+export function parseYearMonth(sp: PeriodParams, today: string) {
+  const year = /^\d{4}$/.test(sp.anio ?? "") ? Number(sp.anio) : Number(today.slice(0, 4));
+  const m = sp.mes === undefined || sp.mes === "" ? Number(today.slice(5, 7)) : Number(sp.mes);
+  const month = m >= 0 && m <= 12 ? m : Number(today.slice(5, 7));
+  const { filters } = parseRange({ anio: String(year), mes: month ? String(month) : "" }, today);
+  return { year, month, filters };
+}
+
+function parseRange(sp: PeriodParams, today: string): { filters: Filters; label: string; from?: string; to?: string } {
   let from: string | undefined;
   let to: string | undefined;
   let label = "Todo el historial";

@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Todo salvo estáticos, íconos, manifest, service worker y el cron.
-    "/((?!_next/static|_next/image|icon.png|apple-icon.png|icons/|manifest.webmanifest|sw.js|offline.html|api/cron).*)",
+    // Todo salvo estáticos, íconos, fuentes y logo (pantalla sin conexión), manifest, service worker y el cron.
+    "/((?!_next/static|_next/image|icon.png|apple-icon.png|icons/|fonts/|brand/|manifest.webmanifest|sw.js|offline.html|api/cron).*)",
   ],
 };

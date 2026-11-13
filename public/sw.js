@@ -8,9 +8,10 @@
  *   notificación (gasto, juntada, evento…), aunque la app ya esté abierta.
  * Cambiar VERSION fuerza a que las instalaciones viejas limpien su caché.
  */
-const VERSION = "v4";
+const VERSION = "v5";
 const STATIC_CACHE = `mamani-static-${VERSION}`;
-const PRECACHE = ["/offline.html", "/icons/icon-192.png"];
+// La pantalla sin conexión, con sus fuentes y el logo (tienen que estar antes de perder la red).
+const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/fonts/fredoka-latin.woff2", "/fonts/nunito-latin.woff2", "/brand/wordmark-sm.png"];
 
 self.addEventListener("install", (event) => {
   // Se activa enseguida: así las notificaciones las maneja siempre la versión nueva.
@@ -37,7 +38,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/fonts/") || url.pathname.startsWith("/brand/")) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
