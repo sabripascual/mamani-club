@@ -19,9 +19,9 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
   const [data, { tree }, { members }, myAliases] = await Promise.all([getGasto(gastoId), getCategories(), getMembers(), getAliases([profile.id])]);
   if (!data || data.gasto.juntada_id !== id) notFound();
   const { gasto: g, shares } = data;
-  // La base también lo valida: quien lo cargó, la responsable de una invitada o una admin.
+  // La base también lo valida: quien lo cargó, quien lo pagó, la responsable de una invitada o una admin.
   const guestResponsible = shares.some((s) => s.guest_name && s.member_id === profile.id);
-  if (g.status !== "active" || (profile.role !== "admin" && g.created_by !== profile.id && !guestResponsible)) redirect(`/gastos/${id}`);
+  if (g.status !== "active" || (profile.role !== "admin" && g.created_by !== profile.id && g.paid_by !== profile.id && !guestResponsible)) redirect(`/gastos/${id}`);
   return (
     <>
       <Link href={`/gastos/${id}/gasto/${gastoId}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite"><ArrowLeft className="size-4" /> Volver al gasto</Link>
@@ -40,8 +40,8 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
           guests: shares.filter((s) => s.guest_name).map((s) => ({ name: s.guest_name!, responsible_id: s.member_id, amount_cents: s.amount_cents })),
         }}
       />
-      {/* Quitar el gasto: solo quien lo cargó o una admin (la responsable de una invitada solo lo edita). */}
-      {(profile.role === "admin" || g.created_by === profile.id) && (
+      {/* Quitar el gasto: quien lo cargó, quien lo pagó o una admin (la responsable de una invitada solo lo edita). */}
+      {(profile.role === "admin" || g.created_by === profile.id || g.paid_by === profile.id) && (
         <div className="mt-8 border-t border-graphite/10 pt-6"><VoidGastoButton gastoId={gastoId} juntadaId={id} /></div>
       )}
     </>

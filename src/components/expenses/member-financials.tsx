@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryIcon } from "./category-icon";
 import { StatusChip } from "./status-chip";
+import { DateInput } from "@/components/ui/date-input";
 
 export type MovementFilters = { desde?: string; hasta?: string; categoria?: string; estado?: string; tipo?: string };
 
@@ -53,8 +54,8 @@ export async function MemberFinancials({ memberId, filters, basePath }: { member
 
       <h2 className="mt-8 mb-3 font-display text-xl">Historial</h2>
       <form action={basePath} className="mb-4 flex flex-wrap gap-2">
-        <input type="date" name="desde" defaultValue={filters.desde} className={input} aria-label="Desde" />
-        <input type="date" name="hasta" defaultValue={filters.hasta} className={input} aria-label="Hasta" />
+        <DateInput name="desde" defaultValue={filters.desde} className={input} placeholder="Desde" />
+        <DateInput name="hasta" defaultValue={filters.hasta} className={input} placeholder="Hasta" />
         <select name="categoria" defaultValue={filters.categoria ?? ""} className={input} aria-label="Tipo de juntada">
           <option value="">Todos los tipos</option>
           {types.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

@@ -23,7 +23,7 @@ export function BottomNav({ pendingRequests = 0 }: { pendingRequests?: number })
                 <Link
                   href={href}
                   aria-label={label}
-                  className="flex size-14 items-center justify-center rounded-full bg-rose text-graphite shadow-lg shadow-rose/40 ring-4 ring-lime transition active:scale-95"
+                  className="flex size-14 items-center justify-center rounded-full bg-lime text-graphite shadow-lg shadow-rose/40 ring-4 ring-rose transition active:scale-95"
                 >
                   <Icon className="size-6" strokeWidth={2} />
                 </Link>

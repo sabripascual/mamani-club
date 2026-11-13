@@ -1,5 +1,6 @@
 "use client";
 
+import { actionButtonClass } from "@/components/ui/action-card";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Check, HelpCircle, Loader2, ReceiptText, Trash2, X } from "lucide-react";
@@ -50,7 +51,7 @@ export function ConvertButton({ eventId }: { eventId: string }) {
           if (r.ok && r.id) router.push(`/gastos/${r.id}`); else setError(r.error ?? "Error");
         });
       }}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-rose py-3.5 font-semibold text-graphite shadow-lg shadow-rose/30 ring-4 ring-lime/70 transition active:scale-[0.99] disabled:opacity-60">
+        className={cn(actionButtonClass, "w-full py-3.5")}>
         {pending ? <Loader2 className="size-5 animate-spin" /> : <ReceiptText className="size-5" />} Convertir en juntada y cargar gastos
       </button>
       {error && <p className="mt-2 text-sm text-rose-dark">{error}</p>}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MONTHS } from "@/lib/dates";
 import type { PeriodParams } from "@/lib/stats/load";
+import { DateInput } from "@/components/ui/date-input";
 
 type Opt = { id: string; name: string };
 
@@ -42,9 +43,9 @@ export function PeriodFilter({
       <details className="mt-2 text-sm" open={!!(sp.desde || sp.hasta)}>
         <summary className="cursor-pointer text-graphite/60">Rango de fechas</summary>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <input type="date" name="desde" defaultValue={sp.desde} className={cls} aria-label="Desde" />
-          <span className="text-graphite/50">a</span>
-          <input type="date" name="hasta" defaultValue={sp.hasta} className={cls} aria-label="Hasta" />
+          <DateInput name="desde" defaultValue={sp.desde} className={cls} placeholder="Desde" />
+          <span className="text-graphite/40">|</span>
+          <DateInput name="hasta" defaultValue={sp.hasta} className={cls} placeholder="Hasta" />
           <span className="text-xs text-graphite/50">(si elegís un rango, reemplaza año y mes)</span>
         </div>
       </details>

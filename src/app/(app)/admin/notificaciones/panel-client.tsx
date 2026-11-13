@@ -1,5 +1,6 @@
 "use client";
 
+import { actionButtonClass } from "@/components/ui/action-card";
 import { useState, useTransition } from "react";
 import { Eye, EyeOff, Plus, Send, Trash2 } from "lucide-react";
 import { addMessage, broadcast, deleteMessage, toggleMessage, type NResult } from "@/lib/admin/notification-actions";
@@ -82,7 +83,7 @@ export function BroadcastForm({ members }: { members: { id: string; name: string
         </div>
       )}
       <button disabled={pending || !title.trim() || !body.trim() || (!all && picked.length === 0)}
-        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-rose font-semibold text-graphite shadow-lg shadow-rose/30 disabled:opacity-40">
+        className={cn(actionButtonClass, "h-12")}>
         <Send className="size-4" /> Enviar ahora
       </button>
       {msg && <p className={cn("text-sm", msg.tone === "error" ? "text-rose-dark" : "text-graphite/70")}>{msg.text}</p>}

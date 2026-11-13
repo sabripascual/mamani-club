@@ -26,7 +26,10 @@ export type StatGasto = {
 export type StatShare = { expense_id: string; member_id: string; amount_cents: number; is_participant: boolean; guest_name?: string | null };
 export type StatAttendee = { juntada_id: string; member_id: string };
 export type StatNet = { juntada_id: string; member_id: string; net_cents: number };
-export type StatSettlement = { juntada_id: string; amount_cents: number };
+export type StatSettlement = { juntada_id: string; amount_cents: number; from_member?: string };
+/** Eventos ya ocurridos (para "No se pierde una" y "Fantasma"). `day` = AAAA-MM-DD en hora AR. */
+export type StatEvent = { id: string; day: string; type_id: string | null };
+export type StatRsvp = { event_id: string; member_id: string; response: "going" | "maybe" | "no" };
 export type StatCategory = { id: string; parent_id: string | null; code: string | null; name: string; kind?: string };
 export type StatMember = { id: string; status: string };
 
@@ -37,6 +40,8 @@ export type Dataset = {
   attendees: StatAttendee[];
   nets: StatNet[];
   settlements: StatSettlement[];
+  events?: StatEvent[];
+  rsvps?: StatRsvp[];
   categories: StatCategory[];
   members: StatMember[];
 };
@@ -70,6 +75,12 @@ export function filterDataset(ds: Dataset, f: Filters): Dataset {
     attendees: ds.attendees.filter((a) => ids.has(a.juntada_id)),
     nets: ds.nets.filter((n) => ids.has(n.juntada_id)),
     settlements: ds.settlements.filter((s) => ids.has(s.juntada_id)),
+    ...(() => {
+      const events = (ds.events ?? []).filter((e) =>
+        (!f.from || e.day >= f.from) && (!f.to || e.day <= f.to) && (!f.typeId || e.type_id === f.typeId));
+      const eIds = new Set(events.map((e) => e.id));
+      return { events, rsvps: (ds.rsvps ?? []).filter((r) => eIds.has(r.event_id)) };
+    })(),
   };
 }
 
@@ -190,6 +201,10 @@ export type MemberStat = {
   pendingCents: number; // lo que debe hoy
   fiestas: number;
   tercerTiempo: number;
+  going: number; // eventos en los que puso "Voy"
+  paidJuntadas: number; // juntadas en las que registró algún pago (pagó un gasto o transfirió)
+  noShows: number; // eventos en los que puso "No voy" o no respondió
+  unpaidJuntadas: number; // juntadas sin ningún pago suyo
 };
 
 function relevantMembers(ds: Dataset) {
@@ -211,6 +226,7 @@ export function memberStats(ds: Dataset): MemberStat[] {
     relevantMembers(ds).map((id) => [id, {
       memberId: id, participations: 0, participationRate: 0, advancedCents: 0, timesPaid: 0, consumedCents: 0,
       avgConsumedCents: 0, created: 0, pendingCents: 0, fiestas: 0, tercerTiempo: 0,
+      going: 0, paidJuntadas: 0, noShows: 0, unpaidJuntadas: 0,
     }]),
   );
 
@@ -242,7 +258,21 @@ export function memberStats(ds: Dataset): MemberStat[] {
     const st = stats.get(n.member_id);
     if (st && n.net_cents < 0) st.pendingCents += -n.net_cents;
   }
+  // Pagos registrados: pagó un gasto o hizo una transferencia en la juntada.
+  const paidIn = new Map<string, Set<string>>();
+  const markPaid = (m: string, j: string) => paidIn.set(m, (paidIn.get(m) ?? new Set()).add(j));
+  for (const g of ds.gastos) markPaid(g.paid_by, g.juntada_id);
+  for (const t of ds.settlements) if (t.from_member) markPaid(t.from_member, t.juntada_id);
+  const events = ds.events ?? [];
+  const answer = new Map((ds.rsvps ?? []).map((r) => [`${r.event_id}:${r.member_id}`, r.response]));
   for (const st of stats.values()) {
+    st.paidJuntadas = paidIn.get(st.memberId)?.size ?? 0;
+    st.unpaidJuntadas = total - st.paidJuntadas;
+    for (const e of events) {
+      const r = answer.get(`${e.id}:${st.memberId}`);
+      if (r === "going") st.going += 1;
+      else if (r === undefined || r === "no") st.noShows += 1;
+    }
     st.participationRate = total ? st.participations / total : 0;
     st.avgConsumedCents = st.participations ? Math.round(st.consumedCents / st.participations) : 0;
   }
@@ -262,23 +292,25 @@ export type Ranking = {
 type RankDef = {
   key: string; title: string; description: string; unit: Ranking["unit"];
   value: (s: MemberStat) => number; ascending?: boolean; minTotal?: number;
+  /** Solo hay ganadora si no están todas iguales. */
+  needsDifference?: boolean;
   detail?: (s: MemberStat, total: number) => string;
 };
 
 export const RANKING_DEFS: RankDef[] = [
-  { key: "presente", title: "La más presente", description: "Mayor porcentaje de juntadas a las que fue.", unit: "percent",
-    value: (s) => s.participationRate, detail: (s, t) => `${s.participations} de ${t} juntadas` },
-  { key: "ausente", title: "La más ausente", description: "Menor porcentaje de asistencia.", unit: "percent", ascending: true, minTotal: 3,
-    value: (s) => s.participationRate, detail: (s, t) => `${s.participations} de ${t} juntadas` },
+  { key: "presente", title: "No se pierde una", description: "Veces que puso “Voy” en un evento + juntadas en las que registró algún pago.", unit: "count",
+    value: (s) => s.going + s.paidJuntadas, detail: (s) => `${s.going} “Voy” · ${s.paidJuntadas} juntadas con pagos` },
+  { key: "ausente", title: "Fantasma 👻", description: "Eventos en los que puso “No voy” o no respondió + juntadas sin ningún pago suyo.", unit: "count", minTotal: 3, needsDifference: true,
+    value: (s) => s.noShows + s.unpaidJuntadas, detail: (s) => `${s.noShows} sin ir o sin responder · ${s.unpaidJuntadas} juntadas sin pagos` },
   { key: "fiestera", title: "La más fiestera", description: "Más juntadas de tipo “Salida / boliche”.", unit: "count", value: (s) => s.fiestas },
   { key: "tercer_tiempo", title: "La reina del tercer tiempo", description: "Más juntadas de tipo “Tercer tiempo”.", unit: "count", value: (s) => s.tercerTiempo },
   { key: "adelanto", title: "La que más plata adelantó", description: "Total de gastos que pagó por el grupo (no es su consumo).", unit: "money",
     value: (s) => s.advancedCents, detail: (s) => `pagó ${s.timesPaid} ${s.timesPaid === 1 ? "gasto" : "gastos"}` },
-  { key: "gastadora", title: "La más gastadora", description: "Mayor consumo personal (su parte en cada gasto).", unit: "money", value: (s) => s.consumedCents },
+  { key: "gastadora", title: "¿De qué vive??", description: "Suma de todos sus gastos registrados (su parte en cada gasto).", unit: "money", value: (s) => s.consumedCents },
   { key: "creadora", title: "La que más gastos cargó", description: "Gastos registrados por ella en la app.", unit: "count", value: (s) => s.created },
   { key: "promedio", title: "La que más consumió en promedio", description: "Consumo promedio por juntada a la que fue.", unit: "money",
     value: (s) => s.avgConsumedCents, detail: (s) => `${s.participations} juntadas` },
-  { key: "deudora", title: "La que más deudas pendientes tiene", description: "Lo que debe hoy de las juntadas del período.", unit: "money", value: (s) => s.pendingCents },
+  { key: "deudora", title: "El roedor", description: "Mayor saldo total adeudado hoy.", unit: "money", value: (s) => s.pendingCents },
 ];
 
 /** No inventa ganadoras: sin datos (o sin diferencia, en "ausente") no hay ganadora. */
@@ -290,7 +322,7 @@ export function rankings(stats: MemberStat[], totalJuntadas: number): Ranking[] 
     const enough = totalJuntadas > 0 && totalJuntadas >= (d.minTotal ?? 1);
     const top = rows[0]?.value ?? 0;
     const allEqual = rows.every((r) => r.value === top);
-    const meaningful = enough && (d.ascending ? !allEqual : top > 0);
+    const meaningful = enough && (d.ascending || d.needsDifference ? !allEqual && (d.ascending || top > 0) : top > 0);
     const winners = meaningful ? rows.filter((r) => r.value === top).map((r) => r.memberId) : [];
     return { key: d.key, title: d.title, description: d.description, unit: d.unit, rows, winners };
   });

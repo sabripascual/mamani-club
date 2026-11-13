@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, isBirthdayOn, planBirthdays, planEventReminders, planNewEvent, planWeekly } from "./calendar-plan";
+import { addDays, isBirthdayOn, planBirthdays, planEventReminders, planNewEvent, planWeekly, pickNoRepeat } from "./calendar-plan";
 
 const first = <T,>(xs: T[]) => xs[0];
 const people = [
@@ -67,4 +67,13 @@ describe("planNewEvent", () => {
   it("sin frases activas, usa una por defecto", () => {
     expect(planNewEvent(ev, ["bea"], "ana", first, [])[0].title).toBe("¡Hay plan nuevo!");
   });
+});
+
+describe("pickNoRepeat", () => {
+  const pool = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  it("nunca repite la última usada", () => {
+    for (const r of [0, 0.4, 0.99]) expect(pickNoRepeat(pool, "a", () => r)!.id).not.toBe("a");
+  });
+  it("con una sola frase, la usa igual", () => expect(pickNoRepeat([{ id: "a" }], "a")!.id).toBe("a"));
+  it("sin frases, nada", () => expect(pickNoRepeat([], null)).toBeUndefined());
 });

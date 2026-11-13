@@ -9,7 +9,7 @@ const PIECES = Array.from({ length: 18 }, (_, i) => {
 });
 
 /** Celebración a pantalla completa: tilde rosa + mensaje (~3 s). Se puede cerrar tocando. */
-export function PaymentCelebration({ message = "¡Gracias perrita!", onDone }: { message?: string; onDone: () => void }) {
+export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, onDone }: { message?: string; subtitle?: string; onDone: () => void }) {
   useEffect(() => {
     navigator.vibrate?.(40);
     const t = setTimeout(onDone, 3200);
@@ -37,25 +37,29 @@ export function PaymentCelebration({ message = "¡Gracias perrita!", onDone }: {
             <path d="M5 12.5l4.5 4.5L19 7.5" strokeDasharray="48" style={{ animation: "mc-draw 0.45s 0.25s ease-out both" }} />
           </svg>
         </span>
-        <p className="mt-5 font-display text-3xl font-semibold text-graphite">{message}</p>
+        <p className="mt-5 max-w-xs text-center font-display text-3xl font-semibold text-graphite">{message}</p>
+        {subtitle && <p className="mt-1 text-center text-base text-graphite/70">{subtitle}</p>}
       </div>
     </div>
   );
 }
 
 /** Dispara la celebración desde cualquier parte (sobrevive aunque el botón desaparezca). */
-export function celebrate(message?: string) {
-  window.dispatchEvent(new CustomEvent("mc:celebrate", { detail: message }));
+export function celebrate(message?: string, subtitle?: string) {
+  window.dispatchEvent(new CustomEvent("mc:celebrate", { detail: { message, subtitle } }));
 }
 
 /** Va una sola vez en el layout de la app. */
 export function CelebrationHost() {
-  const [message, setMessage] = useState<string | null>(null);
+  const [shown, setShown] = useState<{ message: string; subtitle?: string } | null>(null);
   useEffect(() => {
-    const on = (e: Event) => setMessage((e as CustomEvent<string | undefined>).detail ?? "¡Gracias perrita!");
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ message?: string; subtitle?: string }>).detail;
+      setShown({ message: d?.message ?? "¡Gracias perrita!", subtitle: d?.subtitle });
+    };
     window.addEventListener("mc:celebrate", on);
     return () => window.removeEventListener("mc:celebrate", on);
   }, []);
-  const done = useCallback(() => setMessage(null), []);
-  return message ? <PaymentCelebration message={message} onDone={done} /> : null;
+  const done = useCallback(() => setShown(null), []);
+  return shown ? <PaymentCelebration message={shown.message} subtitle={shown.subtitle} onDone={done} /> : null;
 }
