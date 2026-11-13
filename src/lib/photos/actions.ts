@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyNewPhotos } from "@/lib/push/photo-alerts";
 
 export type Result<T = undefined> = { ok: boolean; error?: string; data?: T };
 
@@ -67,4 +69,11 @@ export async function refreshAlbum(expenseId: string) {
   revalidatePath(`/gastos/${expenseId}`);
   revalidatePath("/");
   revalidatePath("/recuerdos");
+}
+
+/** Después de subir fotos: aviso a todo el grupo de que hay recuerdos nuevos de la juntada. */
+export async function photosUploaded(juntadaId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) after(() => notifyNewPhotos(juntadaId, user.id).catch(() => {}));
 }

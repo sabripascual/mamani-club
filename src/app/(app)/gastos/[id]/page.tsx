@@ -16,7 +16,7 @@ import { StatusChip } from "@/components/expenses/status-chip";
 import { MemberAvatar, memberName } from "@/components/expenses/member-avatar";
 import { Gallery } from "@/components/photos/gallery";
 import { PhotoUploader } from "@/components/photos/photo-uploader";
-import { GuestPaidButton, JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
+import { FinishLoadingButton, GuestPaidButton, JoinButton, LeaveButton, SettleButton, UndoSettlementButton, VoidJuntadaButton } from "./actions-client";
 import { getAliases } from "@/lib/profile/aliases";
 import { CopyAlias } from "@/components/copy-alias";
 import { MapsLink } from "@/components/maps-link";
@@ -83,7 +83,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm text-graphite/60">Total de la juntada</p>
-            <p className="font-display text-4xl font-semibold tabular-nums">{formatMoney(status?.total_cents ?? 0, j.currency, { round: true })}</p>
+            <p className="font-display text-4xl font-semibold tabular-nums">{formatMoney(status?.total_cents ?? 0, j.currency)}</p>
             <p className="text-xs text-graphite/55">{gastos.length} {gastos.length === 1 ? "gasto" : "gastos"} · {attendees.length} fueron</p>
           </div>
           {status && <StatusChip status={status.settlement_status} />}
@@ -98,7 +98,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
 
       {/* Cómo saldamos */}
       {active && transfers.length > 0 && (
-        <section className="mb-8">
+        <section id="saldar" className="mb-8 scroll-mt-6">
           <h2 className="mb-1 font-display text-xl">Cómo saldamos</h2>
           <p className="mb-3 text-xs text-graphite/55">La menor cantidad de transferencias para quedar todas a mano. Se recalcula si cambia un gasto.</p>
           <ul className="flex flex-col gap-2">
@@ -135,7 +135,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
 
       {/* Invitadas: cada una paga su parte a quien pagó el gasto */}
       {active && guestDebts.length > 0 && (
-        <section className="mb-8">
+        <section id="invitadas" className="mb-8 scroll-mt-6">
           <h2 className="mb-1 font-display text-xl">Invitadas</h2>
           <p className="mb-3 text-xs text-graphite/55">Cada invitada le paga su parte a quien pagó el gasto. Lo marcan su responsable o una admin.</p>
           <ul className="flex flex-col gap-2">
@@ -194,7 +194,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                     </span>
                   </span>
                   <span className="text-right">
-                    <span className="block font-semibold tabular-nums">{formatMoney(g.amount_cents, g.currency, { round: true })}</span>
+                    <span className="block font-semibold tabular-nums">{formatMoney(g.amount_cents, g.currency)}</span>
                     {mine && <span className="text-[11px] font-semibold text-rose-dark">Lo cargaste vos</span>}
                   </span>
                 </>
@@ -208,6 +208,11 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
           </ul>
         )}
       </section>
+
+      {/* Quien cargó gastos cierra su carga: avisa a la juntada y vuelve al inicio. */}
+      {active && gastos.some((g) => g.created_by === me) && (
+        <div className="-mt-4 mb-8"><FinishLoadingButton juntadaId={j.id} /></div>
+      )}
 
       {/* Asistentes */}
       <section className="mb-8">

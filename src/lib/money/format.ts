@@ -20,9 +20,12 @@ export function formatMoney(cents: number | bigint, currency = "ARS", opts: { co
  * Lee un importe escrito a la argentina y lo devuelve en centavos.
  * "120000", "120.000", "120.000,50", "$ 1.500,5" → centavos. Devuelve null si no es válido.
  * Regla: la coma es el separador decimal; los puntos son de miles.
+ * Excepción (teclados del teléfono que solo tienen punto): sin coma, un punto final
+ * seguido de 1 o 2 dígitos es decimal ("1500.50", "99.5"); con 3 dígitos es de miles.
  */
 export function parseMoney(input: string): number | null {
-  const s = input.replace(/[\s$]/g, "");
+  let s = input.replace(/[\s$]/g, "");
+  if (!s.includes(",")) s = s.replace(/\.(\d{1,2})$/, ",$1");
   if (!/^\d{1,3}(\.\d{3})*(,\d{1,2})?$|^\d+(,\d{1,2})?$/.test(s)) return null;
   const [int, dec = ""] = s.replace(/\./g, "").split(",");
   const cents = Number(int) * 100 + Number(dec.padEnd(2, "0"));

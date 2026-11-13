@@ -319,6 +319,17 @@ tests/e2e/             Playwright
   el historial de notificaciones es solo de admins, `debt_reminders_sent()` (migración 0014)
   expone únicamente integrante y día de esos avisos. Se quitaron "La reina del tercer tiempo"
   y "La que más gastos cargó". Las tarjetas muestran solo el título.
+- **ADR-030** Notificaciones que abren su pantalla: iPhone no soporta `WindowClient.navigate()`
+  desde el service worker; si falla, el service worker le manda un mensaje (`mc:navigate`) a
+  la app abierta y ella navega. Destinos: deuda → "Cómo saldamos" de la juntada (`#saldar`),
+  gasto cargado → detalle del gasto, invitada → `#invitadas`, fotos → álbum, evento → evento.
+- **ADR-031** Avisos nuevos (sin registro en `notification_log`, como "te pagaron"):
+  fotos subidas ("📸 ¡Nuevo recuerdo!", a todas menos quien subió; cuenta en el servidor las
+  fotos de los últimos 15 minutos) y "Terminé de cargar" (a las de la juntada, con lo que
+  debe cada una).
+- **ADR-032** Importes: además de la coma, se acepta punto decimal cuando le siguen 1 o 2
+  dígitos al final ("1500.50"), porque muchos teclados de teléfono solo tienen punto. Con 3
+  dígitos sigue siendo separador de miles. Los totales de juntada se muestran con centavos.
 
 ## 10. Riesgos y limitaciones conocidas
 

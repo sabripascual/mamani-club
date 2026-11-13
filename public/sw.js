@@ -4,10 +4,11 @@
  * - Páginas: siempre red (nunca cacheamos datos financieros ni fotos privadas);
  *   si no hay conexión, se muestra /offline.html.
  * - Supabase y cualquier otro origen: no se tocan.
- * - Notificaciones push: título + texto + ícono; al tocarla abre la juntada.
+ * - Notificaciones push: título + texto + ícono; al tocarla abre la pantalla de esa
+ *   notificación (gasto, juntada, evento…), aunque la app ya esté abierta.
  * Cambiar VERSION fuerza a que las instalaciones viejas limpien su caché.
  */
-const VERSION = "v3";
+const VERSION = "v4";
 const STATIC_CACHE = `mamani-static-${VERSION}`;
 const PRECACHE = ["/offline.html", "/icons/icon-192.png"];
 
@@ -77,18 +78,24 @@ self.addEventListener("push", (event) => {
   );
 });
 
+// Si la app ya está abierta, la lleva a la pantalla de la notificación. iPhone no permite
+// navigate() desde el service worker: en ese caso le pedimos a la app que navegue ella.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
-      for (const w of wins) {
-        if ("focus" in w) {
-          w.navigate(url);
-          return w.focus();
-        }
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (wins) => {
+      const win = wins.find((w) => "focus" in w);
+      if (!win) return self.clients.openWindow(url);
+      const focused = (await win.focus().catch(() => null)) || win;
+      if (focused.url === url) return;
+      try {
+        if (!("navigate" in focused)) throw new Error("sin navigate");
+        const res = await focused.navigate(url);
+        if (!res) throw new Error("no navegó");
+      } catch {
+        focused.postMessage({ type: "mc:navigate", url });
       }
-      return self.clients.openWindow(url);
     }),
   );
 });

@@ -57,7 +57,7 @@ export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memb
       return sendToMember(memberId, {
         title: e.own === null ? "¡Tu invitada está en un gasto!" : "¡Poniendo estaba la gansa!",
         body: `${actor} cargó ${g.title} (${money(Number(g.amount_cents))}) en ${j.title}. ${parts.join(" · ")}${debt > 0 ? ` · Debés ${money(debt)}` : ""}`,
-        url: `/gastos/${juntadaId}`,
+        url: `/gastos/${juntadaId}/gasto/${gastoId}`,
         tag: `gasto-${gastoId}`,
       }, mine);
     }),
@@ -142,4 +142,43 @@ async function notifyPayerOfGasto(admin: ReturnType<typeof createAdminClient>, g
     url: `/gastos/${juntadaId}/gasto/${gastoId}`,
     tag: `gasto-pagado-${gastoId}`,
   }, subs as Sub[]);
+}
+
+/**
+ * "Terminé de cargar": avisa a todas las de la juntada (asistentes, participantes y quienes
+ * pagaron), menos a quien cargó, que ya están los gastos y cuánto debe cada una.
+ */
+export async function notifyLoadFinished(juntadaId: string, actorId: string) {
+  if (!pushConfigured()) return;
+  const admin = createAdminClient();
+  const [{ data: j }, { data: att }, { data: gastos }, { data: transfers }, actor] = await Promise.all([
+    admin.from("juntadas").select("title, currency").eq("id", juntadaId).single(),
+    admin.from("juntada_attendees").select("member_id").eq("juntada_id", juntadaId),
+    admin.from("expenses").select("id, paid_by, amount_cents, created_by").eq("juntada_id", juntadaId).eq("status", "active"),
+    admin.rpc("juntada_transfers", { p_juntada: juntadaId }),
+    nameOf(admin, actorId),
+  ]);
+  if (!j || !gastos?.length) return;
+  const { data: shares } = await admin.from("expense_shares").select("member_id").is("guest_name", null).in("expense_id", gastos.map((g) => g.id));
+  const people = new Set([...(att ?? []).map((a) => a.member_id as string), ...(shares ?? []).map((s) => s.member_id as string), ...gastos.map((g) => g.paid_by as string)]);
+  people.delete(actorId);
+  if (people.size === 0) return;
+  const { data: subs } = await admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").in("member_id", [...people]);
+  const owe = new Map<string, number>();
+  for (const t of (transfers ?? []) as { from_member: string; amount_cents: number }[]) owe.set(t.from_member, (owe.get(t.from_member) ?? 0) + Number(t.amount_cents));
+  const money = (c: number) => formatMoney(c, j.currency);
+  const mine = gastos.filter((g) => g.created_by === actorId);
+  const loaded = mine.length === 1 ? "un gasto" : `${mine.length} gastos`;
+  const total = mine.reduce((a, g) => a + Number(g.amount_cents), 0);
+  await Promise.all([...people].map((m) => {
+    const s = ((subs ?? []) as Sub[]).filter((x) => x.member_id === m);
+    if (s.length === 0) return 0;
+    const debt = owe.get(m) ?? 0;
+    return sendToMember(m, {
+      title: `${actor} cargó ${loaded} 🧾`,
+      body: `${j.title}: ${money(total)}.${debt > 0 ? ` Debés ${money(debt)}, transferí desde la juntada.` : " Revisá cuánto te toca."}`,
+      url: debt > 0 ? `/gastos/${juntadaId}#saldar` : `/gastos/${juntadaId}`,
+      tag: `carga-${juntadaId}`,
+    }, s);
+  }));
 }

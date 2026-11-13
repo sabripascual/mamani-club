@@ -18,7 +18,7 @@ describe("deudoras", () => {
     const [n] = planNotifications("2026-11-02", [debt()], [], all, money).filter((p) => p.kind === "debtor");
     expect(n.title).toBe("Perrita deudora!");
     expect(n.body).toContain("Asado");
-    expect(n.url).toBe("/gastos/asado");
+    expect(n.url).toBe("/gastos/asado#saldar");
   });
   it("avanza la secuencia y el 5 se repite hasta saldar", () => {
     const titles = [0, 1, 2, 3, 4, 5, 6].map((i) => {

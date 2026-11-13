@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatMoney } from "@/lib/money/format";
 import { formatDay, formatMonth } from "@/lib/dates";
 import {
-  byCategory, byJuntadaType, filterDataset, financialSummary, memberStats, monthlySeries, socialSummary, topJuntadas, type Dataset, type Filters,
+  byCategory, filterDataset, financialSummary, memberStats, monthlySeries, socialSummary, topJuntadas, type Dataset, type Filters,
 } from "@/lib/stats/compute";
 import type { Member } from "@/lib/expenses/types";
 import { displayName } from "@/lib/utils";
@@ -39,7 +39,6 @@ export function Dashboard({
   const cats = byCategory(ds);
   const consumers = [...stats].filter((s) => s.consumedCents > 0).sort((a, b) => b.consumedCents - a.consumedCents);
   const top = topJuntadas(ds, 5);
-  const types = byJuntadaType(ds);
   const catName = new Map(dataset.categories.map((c) => [c.id, c.name]));
 
   return (
@@ -96,22 +95,6 @@ export function Dashboard({
         </section>
 
         <section>
-          <h2 className="mb-3 font-display text-xl">Juntadas por tipo</h2>
-          <Card>
-            <BarList
-              color="chart-2"
-              valueLabel="Juntadas"
-              rows={types.map((t) => ({
-                key: t.id, label: t.name, value: t.count, display: `${t.count}`,
-                sub: `${formatMoney(t.totalCents, "ARS", { compact: true })} en total`,
-              }))}
-            />
-          </Card>
-        </section>
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-2">
-        <section>
           <h2 className="mb-3 font-display text-xl">Juntadas más costosas</h2>
           <ol className="flex flex-col gap-2">
             {top.map((e, i) => (
@@ -122,7 +105,7 @@ export function Dashboard({
                     <span className="block truncate text-sm font-semibold">{e.title}</span>
                     <span className="text-xs text-graphite/55">{formatDay(e.occurred_on)} · {catName.get(e.type_id)}</span>
                   </span>
-                  <span className="font-semibold tabular-nums">{formatMoney(e.totalCents, "ARS", { round: true })}</span>
+                  <span className="font-semibold tabular-nums">{formatMoney(e.totalCents, "ARS")}</span>
                 </Link>
               </li>
             ))}

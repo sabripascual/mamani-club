@@ -24,7 +24,7 @@ export function JuntadaCard({ j, type, index, myNet }: { j: JuntadaListItem; typ
         </div>
       </div>
       <div className="text-right">
-        <p className="font-display text-lg font-semibold tabular-nums">{formatMoney(s?.total_cents ?? 0, j.currency, { round: true })}</p>
+        <p className="font-display text-lg font-semibold tabular-nums">{formatMoney(s?.total_cents ?? 0, j.currency)}</p>
         <p className="text-xs text-graphite/50">{s?.attendees_count ?? 0} fueron</p>
       </div>
       <ChevronRight className="hidden size-4 text-graphite/30 transition group-hover:translate-x-0.5 sm:block" />
