@@ -8,6 +8,7 @@ import { formatMonth, monthKey, MONTHS } from "@/lib/dates";
 import { formatMoney } from "@/lib/money/format";
 import { displayName } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
+import { ActionCard } from "@/components/ui/action-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GastosTabs } from "@/components/expenses/gastos-tabs";
 import { JuntadaCard } from "@/components/expenses/juntada-card";
@@ -35,8 +36,11 @@ export default async function JuntadasPage({ searchParams }: { searchParams: Pro
     : { data: [] };
   const myNet = new Map((mine ?? []).map((r) => [r.juntada_id as string, Number(r.net_cents)]));
 
+  // Primero, las juntadas en las que debo (la más vieja arriba); el resto, por mes.
+  const owing = juntadas.filter((j) => (myNet.get(j.id) ?? 0) < 0).sort((a, b) => a.occurred_on.localeCompare(b.occurred_on));
+  const owingIds = new Set(owing.map((j) => j.id));
   const groups = new Map<string, typeof juntadas>();
-  for (const j of juntadas) groups.set(monthKey(j.occurred_on), [...(groups.get(monthKey(j.occurred_on)) ?? []), j]);
+  for (const j of juntadas.filter((x) => !owingIds.has(x.id))) groups.set(monthKey(j.occurred_on), [...(groups.get(monthKey(j.occurred_on)) ?? []), j]);
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
   const filtered = Object.values(sp).some(Boolean);
   const select = "h-10 rounded-full border border-graphite/10 bg-white/70 px-3 text-sm";
@@ -44,6 +48,7 @@ export default async function JuntadasPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader eyebrow="Juntadas" title="Nuestras juntadas" />
+      <ActionCard href="/gastos/nuevo" className="mb-6" title="Nueva juntada" subtitle="Creá la juntada y cargá el primer gasto" />
       <GastosTabs />
       <form className="mb-6 flex flex-wrap gap-2">
         <select name="anio" defaultValue={sp.anio ?? ""} className={select} aria-label="Año">
@@ -78,6 +83,19 @@ export default async function JuntadasPage({ searchParams }: { searchParams: Pro
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-8">
+          {owing.length > 0 && (
+            <section className="rounded-[var(--radius-card)] bg-rose/15 p-4 ring-1 ring-rose/30">
+              <div className="mb-3 flex items-baseline justify-between">
+                <h2 className="font-display text-xl">Tenés que pagar 🐀</h2>
+                <p className="text-sm font-semibold text-rose-dark">{formatMoney(owing.reduce((a, j) => a - (myNet.get(j.id) ?? 0), 0), "ARS", { round: true })}</p>
+              </div>
+              <ul className="flex flex-col gap-2">
+                {owing.map((j, i) => (
+                  <li key={j.id}><JuntadaCard j={j} type={typeById.get(j.type_id)} index={i} myNet={myNet.get(j.id)} /></li>
+                ))}
+              </ul>
+            </section>
+          )}
           {[...groups].map(([key, list]) => {
             const total = list.reduce((a, j) => a + (j.summary?.total_base_cents ?? 0), 0);
             return (

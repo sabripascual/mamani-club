@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ActionCard } from "@/components/ui/action-card";
 import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCalendarRange } from "@/lib/calendar/queries";
@@ -49,11 +50,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader eyebrow="Calendario" title="Qué se viene" />
-      <Link href={`/calendario/nuevo${selected ? `?dia=${selected}` : ""}`}
-        className="mb-6 flex items-center gap-4 rounded-[var(--radius-card)] bg-rose p-4 text-graphite shadow-lg shadow-rose/30 ring-4 ring-lime/70 transition active:scale-[0.99]">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-graphite text-lime"><CalendarPlus className="size-6" /></span>
-        <span><span className="block font-display text-xl font-semibold">Nuevo evento</span><span className="text-sm text-graphite/75">Proponé un plan y que se sumen</span></span>
-      </Link>
+      <ActionCard href={`/calendario/nuevo${selected ? `?dia=${selected}` : ""}`} className="mb-6" icon={CalendarPlus} title="Nuevo evento" subtitle="Proponé un plan y que se sumen" />
 
       <section className="rounded-[var(--radius-card)] bg-white/70 p-4">
         <div className="mb-3 flex items-center justify-between">

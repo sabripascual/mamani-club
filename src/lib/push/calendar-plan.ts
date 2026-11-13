@@ -89,3 +89,9 @@ export function planNewEvent(
     url: `/calendario/${event.id}`, tag: `evento-nuevo-${event.id}`,
   }));
 }
+
+/** Elige una frase al azar sin repetir la última usada (si hay más de una). */
+export function pickNoRepeat<T extends { id: string }>(pool: T[], lastId: string | null, rand = Math.random): T | undefined {
+  const options = pool.length > 1 && lastId ? pool.filter((m) => m.id !== lastId) : pool;
+  return options.length ? options[Math.floor(rand() * options.length)] : undefined;
+}

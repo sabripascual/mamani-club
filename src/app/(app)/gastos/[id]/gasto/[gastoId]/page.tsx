@@ -31,7 +31,8 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
   const { gasto: g, shares } = data;
   const me = profile.id;
   const guestResponsible = shares.some((s) => s.guest_name && s.member_id === me);
-  const canEdit = g.status === "active" && juntada?.status === "active" && (profile.role === "admin" || g.created_by === me || guestResponsible);
+  // Editar: quien lo cargó, quien lo pagó (aunque lo haya cargado otra), la responsable de una invitada o una admin.
+  const canEdit = g.status === "active" && juntada?.status === "active" && (profile.role === "admin" || g.created_by === me || g.paid_by === me || guestResponsible);
   const cat = catById.get(g.category_id);
   const sub = g.subcategory_id ? catById.get(g.subcategory_id) : undefined;
   const parts = shares.filter((s) => s.is_participant).sort((a, b) => b.amount_cents - a.amount_cents);
@@ -43,8 +44,13 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
     .map((t) => ({ ...t, amount_cents: Number(t.amount_cents) }));
   // 🐀 = todavía debe en la juntada (o la invitada no pagó); 🤑 = está a mano.
   const debtors = new Set(transfers.map((t) => t.from_member));
+  // Para registrar "Pagado" desde acá: lo que cada deudora me tiene que transferir a mí (o, si soy admin, a quien sea).
+  const toSettle = (memberId: string) => juntada?.status === "active"
+    ? transfers.filter((t) => t.from_member === memberId && t.from_member !== me && (t.to_member === me || profile.role === "admin"))
+      .map((t) => ({ ...t, amount_cents: Number(t.amount_cents) }))
+    : [];
   const isAdmin = profile.role === "admin";
-  const aliasesBy = await getAliases([...new Set([...mine.map((t) => t.to_member), g.paid_by])]);
+  const aliasesBy = await getAliases([...new Set([...transfers.map((t) => t.to_member), g.paid_by])]);
   const aliasOf = (memberId: string) => refundAliasFor(juntadaGastos ?? [], memberId, aliasesBy.get(memberId)?.[0]?.alias);
 
   return (
@@ -106,24 +112,26 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
       <h2 className="mb-3 font-display text-xl">Parte de cada una</h2>
       <ul className="mb-8 flex flex-col gap-2">
         {parts.map((s) => (
-          <li key={`${s.member_id}|${s.guest_name ?? ""}`} className={`flex items-center justify-between gap-3 rounded-2xl p-3 ${s.member_id === me ? "bg-white ring-1 ring-rose/40" : "bg-white/60"}`}>
+          <li key={`${s.member_id}|${s.guest_name ?? ""}`} className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3 ${s.member_id === me ? "bg-white ring-1 ring-rose/40" : "bg-white/60"}`}>
             {s.guest_name ? (
               <span className="flex min-w-0 items-center gap-3">
                 <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-bold">{s.guest_name.charAt(0).toUpperCase()}</span>
                 <span className="min-w-0 leading-tight">
-                  <span className="block truncate font-semibold">{s.guest_name}</span>
+                  <span className="block truncate font-semibold">{s.guest_name}{!s.guest_paid_at && <span className="ml-1.5" role="img" aria-label="debe" title="Debe">🐀</span>}</span>
                   <span className="block truncate text-xs text-graphite/55">{s.member_id === me ? "tu invitada" : `invitada de ${memberName(memberById.get(s.member_id))}`} · le paga a {memberName(memberById.get(g.paid_by), me)}</span>
                 </span>
               </span>
             ) : (
-              <span className="flex items-center gap-3"><MemberAvatar m={memberById.get(s.member_id)} /><span className="font-semibold">{memberName(memberById.get(s.member_id), me)}</span></span>
+              <span className="flex items-center gap-3"><MemberAvatar m={memberById.get(s.member_id)} />
+                <span className="font-semibold">{memberName(memberById.get(s.member_id), me)}{debtors.has(s.member_id) && <span className="ml-1.5" role="img" aria-label="debe" title="Debe">🐀</span>}</span>
+              </span>
             )}
             <span className="flex shrink-0 items-center gap-2">
               <span className="font-semibold tabular-nums">{formatMoney(s.amount_cents, g.currency)}</span>
-              {(() => {
-                const paid = s.guest_name ? !!s.guest_paid_at : !debtors.has(s.member_id);
-                return <span className="text-lg leading-none" role="img" aria-label={paid ? "pagó" : "debe"} title={paid ? "Pagó" : "Debe"}>{paid ? "🤑" : "🐀"}</span>;
-              })()}
+              {(s.guest_name ? !!s.guest_paid_at : !debtors.has(s.member_id)) && <span className="text-lg leading-none" role="img" aria-label="pagó" title="Pagó">🤑</span>}
+              {!s.guest_name && toSettle(s.member_id).map((t) => (
+                <SettleButton key={t.to_member} juntadaId={id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} alias={aliasOf(t.to_member) ?? undefined} meId={me} />
+              ))}
               {s.guest_name && g.status === "active" && juntada?.status === "active" && (isAdmin || s.member_id === me) && (
                 <GuestPaidButton shareId={s.id} juntadaId={id} paid={!!s.guest_paid_at} />
               )}
@@ -131,7 +139,7 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
           </li>
         ))}
       </ul>
-      <p className="-mt-6 mb-8 text-xs text-graphite/50">🤑 pagó · 🐀 debe. Las integrantes saldan toda la juntada junta; cada invitada paga lo suyo.</p>
+      <p className="-mt-6 mb-8 text-xs text-graphite/50">🐀 debe · 🤑 pagó. Las integrantes saldan toda la juntada junta (el “Pagado” registra su transferencia neta); cada invitada paga lo suyo.</p>
       <p className="text-xs text-graphite/50">
         Cargado por {memberName(memberById.get(g.created_by), me)} el {formatTimestamp(g.created_at)}
         {g.updated_at !== g.created_at && ` · editado ${formatTimestamp(g.updated_at)}`}

@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseMoney } from "@/lib/money/format";
-import { notifyGastoLoaded, notifyPaid } from "@/lib/push/expense-alerts";
+import { notifyGastoLoaded, notifyGuestPaid, notifyPaid } from "@/lib/push/expense-alerts";
 
 export type FormState = { error?: string; fields?: Partial<Record<string, string>> };
 export type ActionResult = { ok: boolean; error?: string };
@@ -279,6 +279,8 @@ export async function setGuestPaid(shareId: string, juntadaId: string, paid: boo
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_guest_paid", { p_share_id: shareId, p_paid: paid });
   if (error) return { ok: false, error: error.message };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (paid && user) after(() => notifyGuestPaid(shareId, user.id).catch(() => {}));
   refresh(juntadaId);
   return { ok: true };
 }

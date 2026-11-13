@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, Pencil, Plus, Undo2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pencil, Undo2 } from "lucide-react";
 import { refundAliasFor } from "@/lib/expenses/refund-alias";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getCategories, getJuntada, getJuntadaTypes, getMembers } from "@/lib/expenses/queries";
@@ -20,6 +20,7 @@ import { GuestPaidButton, JoinButton, LeaveButton, SettleButton, UndoSettlementB
 import { getAliases } from "@/lib/profile/aliases";
 import { CopyAlias } from "@/components/copy-alias";
 import { MapsLink } from "@/components/maps-link";
+import { ActionCard } from "@/components/ui/action-card";
 
 export const metadata: Metadata = { title: "Juntada · MAMANÍ CLUB" };
 
@@ -110,7 +111,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                   <ArrowRight className="size-4 shrink-0 text-graphite/35" />
                   <MemberAvatar m={memberById.get(t.to_member)} />
                   <div className="min-w-0 flex-1 text-sm">
-                    <p><strong>{memberName(memberById.get(t.from_member), me)}</strong> → <strong>{memberName(memberById.get(t.to_member), me)}</strong></p>
+                    <p><strong>{memberName(memberById.get(t.from_member), me)}</strong><span className="ml-1" role="img" aria-label="debe">🐀</span> → <strong>{memberName(memberById.get(t.to_member), me)}</strong></p>
                     <p className="font-semibold tabular-nums">{formatMoney(t.amount_cents, j.currency)}</p>
                     {(() => {
                       const al = aliasOf(t.to_member);
@@ -148,7 +149,7 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
                   <ArrowRight className="size-4 shrink-0 text-graphite/35" />
                   <MemberAvatar m={memberById.get(d.creditor)} />
                   <div className="min-w-0 flex-1 text-sm">
-                    <p><strong>{d.guest_name}</strong> → <strong>{memberName(memberById.get(d.creditor), me)}</strong> <span aria-label={paid ? "pagó" : "debe"}>{paid ? "🤑" : "🐀"}</span></p>
+                    <p><strong>{d.guest_name}</strong>{paid ? <span className="ml-1" role="img" aria-label="pagó">🤑</span> : <span className="ml-1" role="img" aria-label="debe">🐀</span>} → <strong>{memberName(memberById.get(d.creditor), me)}</strong></p>
                     <p className="font-semibold tabular-nums">{formatMoney(d.amount_cents, j.currency)} <span className="font-normal text-graphite/55">· {d.gasto.title}</span></p>
                     <p className="text-xs text-graphite/55">{paid ? "Ya pagó" : "Debe"} · invitada de {memberName(memberById.get(d.member_id), me)}</p>
                     {!paid && al && (
@@ -170,18 +171,8 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
           {!canAddGasto && active && <span className="text-xs text-graphite/50">Saldada: no se agregan más gastos</span>}
         </div>
         {canAddGasto && (
-          <Link
-            href={`/gastos/${j.id}/gasto/nuevo`}
-            className="group mb-3 flex items-center gap-4 rounded-[var(--radius-card)] bg-lime p-4 text-graphite shadow-lg shadow-rose/25 ring-4 ring-rose transition hover:brightness-105 active:scale-[0.99]"
-          >
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full border-[2.5px] border-graphite text-graphite transition group-hover:rotate-90">
-              <Plus className="size-6" strokeWidth={2.5} />
-            </span>
-            <span className="flex-1">
-              <span className="block font-display text-xl font-semibold">Agregar gasto</span>
-              <span className="text-sm text-graphite/75">{gastos.length === 0 ? "Cargá lo que se pagó en esta juntada" : "¿Alguien pagó algo más?"}</span>
-            </span>
-          </Link>
+          <ActionCard href={`/gastos/${j.id}/gasto/nuevo`} className="mb-3" title="Agregar gasto"
+            subtitle={gastos.length === 0 ? "Cargá lo que se pagó en esta juntada" : "¿Alguien pagó algo más?"} />
         )}
         {gastos.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-rose/40 p-5 text-center text-sm text-graphite/60">Todavía no hay gastos.</div>

@@ -17,9 +17,11 @@ async function nameOf(admin: ReturnType<typeof createAdminClient>, id: string) {
  * su parte a quien pagó el gasto (la invitada paga lo suyo).
  */
 export async function notifyGastoLoaded(gastoId: string, juntadaId: string, memberIds: string[], actorId: string) {
-  const targets = [...new Set(memberIds)].filter((m) => m !== actorId);
-  if (!pushConfigured() || targets.length === 0) return;
+  if (!pushConfigured()) return;
   const admin = createAdminClient();
+  await notifyPayerOfGasto(admin, gastoId, juntadaId, actorId);
+  const targets = [...new Set(memberIds)].filter((m) => m !== actorId);
+  if (targets.length === 0) return;
   const [{ data: g }, { data: j }, { data: shares }, { data: transfers }, { data: subs }, actor] = await Promise.all([
     admin.from("expenses").select("title, amount_cents, currency, paid_by").eq("id", gastoId).single(),
     admin.from("juntadas").select("title").eq("id", juntadaId).single(),
@@ -98,5 +100,46 @@ async function notifyPaymentConfirmed(juntadaId: string, fromId: string, toId: s
     body: `${to} confirmó que le transferiste ${formatMoney(amountCents, j.currency, { round: true })} por ${j.title}`,
     url: `/gastos/${juntadaId}`,
     tag: `pago-${juntadaId}`,
+  }, subs as Sub[]);
+}
+
+/**
+ * Una invitada pagó su parte (lo marcó su responsable o una admin): "¡Te pagaron,
+ * perrita!" a quien pagó el gasto, salvo que lo haya marcado ella misma.
+ */
+export async function notifyGuestPaid(shareId: string, actorId: string) {
+  if (!pushConfigured()) return;
+  const admin = createAdminClient();
+  const { data: d } = await admin.from("v_guest_debts").select("juntada_id, currency, guest_name, responsible_id, creditor_id, amount_cents").eq("share_id", shareId).maybeSingle();
+  if (!d || d.creditor_id === actorId) return;
+  const [{ data: j }, { data: subs }, responsible] = await Promise.all([
+    admin.from("juntadas").select("title").eq("id", d.juntada_id).single(),
+    admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").eq("member_id", d.creditor_id),
+    nameOf(admin, d.responsible_id),
+  ]);
+  if (!j || !subs?.length) return;
+  await sendToMember(d.creditor_id, {
+    title: "¡Te pagaron, perrita!",
+    body: `${d.guest_name} (invitada de ${responsible}) te pagó ${formatMoney(Number(d.amount_cents), d.currency, { round: true })} por ${j.title}`,
+    url: `/gastos/${d.juntada_id}`,
+    tag: `pago-invitada-${shareId}`,
+  }, subs as Sub[]);
+}
+
+/** Si otra persona cargó un gasto que pagaste vos: aviso para que lo revises (podés editarlo y elegir tu alias). */
+async function notifyPayerOfGasto(admin: ReturnType<typeof createAdminClient>, gastoId: string, juntadaId: string, actorId: string) {
+  const { data: g } = await admin.from("expenses").select("title, amount_cents, currency, paid_by").eq("id", gastoId).maybeSingle();
+  if (!g || g.paid_by === actorId) return;
+  const [{ data: j }, { data: subs }, actor] = await Promise.all([
+    admin.from("juntadas").select("title").eq("id", juntadaId).single(),
+    admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").eq("member_id", g.paid_by),
+    nameOf(admin, actorId),
+  ]);
+  if (!j || !subs?.length) return;
+  await sendToMember(g.paid_by, {
+    title: "Cargaron un gasto a tu nombre",
+    body: `${actor} cargó que pagaste ${g.title} (${formatMoney(Number(g.amount_cents), g.currency, { round: true })}) en ${j.title}. Revisalo y elegí a qué alias te devuelven.`,
+    url: `/gastos/${juntadaId}/gasto/${gastoId}`,
+    tag: `gasto-pagado-${gastoId}`,
   }, subs as Sub[]);
 }

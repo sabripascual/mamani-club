@@ -34,7 +34,7 @@ function build(...js: J[]): Dataset {
       }
     }
     for (const s of j.settlements ?? []) {
-      ds.settlements.push({ juntada_id: j.id, amount_cents: s.amount });
+      ds.settlements.push({ juntada_id: j.id, amount_cents: s.amount, from_member: s.from });
       add(s.from, s.amount);
       add(s.to, -s.amount);
     }
@@ -116,11 +116,41 @@ describe("memberStats y rankings", () => {
   });
   it("rankings por tipo de juntada (fiestera, tercer tiempo) y sin ranking deportivo", () => {
     const r = Object.fromEntries(rankings(stats, 4).map((x) => [x.key, x]));
-    expect(r.presente.winners).toEqual(["caro"]);
+    // Juntadas con pagos: ana 1, bea 2, caro 2 (transfirió en el asado + pagó en el tercer), dani 1.
+    expect(r.presente.title).toBe("No se pierde una");
+    expect(r.presente.winners.sort()).toEqual(["bea", "caro"]);
+    expect(r.ausente.title).toBe("Fantasma 👻");
+    expect(r.ausente.winners.sort()).toEqual(["ana", "dani"]);
+    expect(r.deudora.title).toBe("El roedor");
+    expect(r.deudora.winners).toEqual(["dani"]); // debe $25.000 + $20.000
+    expect(r.gastadora.title).toBe("¿De qué vive??");
     expect(r.fiestera.winners.sort()).toEqual(["ana", "caro"]);
     expect(r.tercer_tiempo.winners.sort()).toEqual(["bea", "caro"]);
     expect(r.adelanto.winners).toEqual(["bea"]);
     expect(r.deportiva).toBeUndefined();
+  });
+  it("eventos: “Voy” suma a No se pierde una; “No voy” o sin responder, a Fantasma", () => {
+    const withEvents: typeof ds = {
+      ...ds,
+      events: [{ id: "e1", day: "2026-02-01", type_id: null }, { id: "e2", day: "2026-02-08", type_id: null }],
+      rsvps: [
+        { event_id: "e1", member_id: "ana", response: "going" }, { event_id: "e2", member_id: "ana", response: "going" },
+        { event_id: "e1", member_id: "bea", response: "no" }, { event_id: "e1", member_id: "caro", response: "maybe" },
+      ],
+    };
+    const st = Object.fromEntries(memberStats(withEvents).map((x) => [x.memberId, x]));
+    expect(st.ana.going).toBe(2);
+    expect(st.bea.noShows).toBe(2); // "No voy" + sin responder
+    expect(st.caro.noShows).toBe(1); // "Tal vez" no cuenta para ninguno
+    expect(st.dani.noShows).toBe(2);
+    const r = Object.fromEntries(rankings(memberStats(withEvents), 4).map((x) => [x.key, x]));
+    expect(r.presente.winners).toEqual(["ana"]); // 2 “Voy” + 1 juntada con pagos
+    expect(r.ausente.winners).toEqual(["dani"]); // 2 + 3
+  });
+  it("el filtro de período también filtra eventos", () => {
+    const f = filterDataset({ ...ds, events: [{ id: "e1", day: "2026-02-01", type_id: null }], rsvps: [{ event_id: "e1", member_id: "ana", response: "going" }] }, { to: "2026-01-31" });
+    expect(f.events).toEqual([]);
+    expect(f.rsvps).toEqual([]);
   });
   it("20/33. sin datos no hay ganadoras inventadas", () => {
     const empty = build();

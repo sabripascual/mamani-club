@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { displayName } from "@/lib/utils";
-import { planBirthdays, planEventReminders, planNewEvent, planWeekly, type Msg, type Planned } from "./calendar-plan";
+import { pickNoRepeat, planBirthdays, planEventReminders, planNewEvent, planWeekly, type Msg, type Planned } from "./calendar-plan";
 import { sendToMember } from "./send";
 
 const AR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
@@ -90,10 +90,15 @@ export async function notifyNewEvent(eventId: string, creatorId: string) {
   const [{ data: e }, { data: people }, { data: pool }] = await Promise.all([
     admin.from("events").select("id, title, starts_at").eq("id", eventId).maybeSingle(),
     admin.from("profiles").select("id").eq("status", "active"),
-    admin.from("notification_messages").select("id, title, body").eq("kind", "event_new").eq("active", true),
+    admin.from("notification_messages").select("id, title, body, last_sent_at").eq("kind", "event_new").eq("active", true),
   ]);
   if (!e) return 0;
   const when = WHEN.format(new Date(e.starts_at)).replace(/^./, (c) => c.toUpperCase()) + " h";
-  const plan = planNewEvent({ id: e.id, title: e.title, when }, (people ?? []).map((p) => p.id as string), creatorId, pickRandom, (pool ?? []) as Msg[]);
+  // Al azar, pero nunca la misma frase que en el evento anterior.
+  const msgs = (pool ?? []) as (Msg & { last_sent_at: string | null })[];
+  const last = msgs.filter((m) => m.last_sent_at).sort((a, b) => b.last_sent_at!.localeCompare(a.last_sent_at!))[0]?.id ?? null;
+  const chosen = pickNoRepeat(msgs, last);
+  if (chosen) await admin.from("notification_messages").update({ last_sent_at: new Date().toISOString() }).eq("id", chosen.id);
+  const plan = planNewEvent({ id: e.id, title: e.title, when }, (people ?? []).map((p) => p.id as string), creatorId, () => chosen, msgs);
   return deliver(plan, AR.format(new Date()));
 }

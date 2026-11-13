@@ -300,6 +300,14 @@ tests/e2e/             Playwright
 - **ADR-024** Evento nuevo: al crearlo se avisa a todo el grupo (menos a quien lo creó)
   con una frase al azar de `notification_messages` (kind `event_new`, editable en el
   panel; `{evento}` y `{fecha}` se completan).
+  Desde la migración 0012 no se repite la frase del evento anterior
+  (`notification_messages.last_sent_at`).
+- **ADR-025** Quien pagó un gasto lo maneja aunque lo haya cargado otra (migración 0012):
+  puede editarlo, quitarlo, elegir su alias y marcar "Pagado" desde la vista del gasto.
+- **ADR-026** Rankings: "No se pierde una" = "Voy" en eventos ya ocurridos + juntadas con
+  algún pago registrado (pagó un gasto o transfirió); "Fantasma 👻" = "No voy" o sin
+  responder en eventos ya ocurridos + juntadas sin pagos suyos; "El roedor" = mayor saldo
+  adeudado; "¿De qué vive??" = suma de su parte en todos los gastos.
 
 ## 10. Riesgos y limitaciones conocidas
 

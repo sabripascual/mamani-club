@@ -38,7 +38,6 @@ export function Dashboard({
 
   const cats = byCategory(ds);
   const consumers = [...stats].filter((s) => s.consumedCents > 0).sort((a, b) => b.consumedCents - a.consumedCents);
-  const advancers = [...stats].filter((s) => s.advancedCents > 0).sort((a, b) => b.advancedCents - a.advancedCents);
   const top = topJuntadas(ds, 5);
   const types = byJuntadaType(ds);
   const catName = new Map(dataset.categories.map((c) => [c.id, c.name]));
@@ -131,7 +130,7 @@ export function Dashboard({
         </section>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div>
         <section>
           <h2 className="mb-1 font-display text-xl">Consumo por integrante</h2>
           <p className="mb-3 text-xs text-graphite/55">Su parte en los gastos de los que participó.</p>
@@ -139,16 +138,6 @@ export function Dashboard({
             <BarList valueLabel="Consumo" rows={consumers.map((s) => ({
               key: s.memberId, label: memberById.get(s.memberId) ? displayName(memberById.get(s.memberId)!) : "—",
               value: s.consumedCents, display: formatMoney(s.consumedCents, "ARS", { compact: true }), sub: `${s.participations} juntadas`,
-            }))} />
-          </Card>
-        </section>
-        <section>
-          <h2 className="mb-1 font-display text-xl">Plata adelantada por integrante</h2>
-          <p className="mb-3 text-xs text-graphite/55">Lo que pagó por el grupo (no es su consumo).</p>
-          <Card>
-            <BarList color="chart-2" valueLabel="Adelantado" rows={advancers.map((s) => ({
-              key: s.memberId, label: memberById.get(s.memberId) ? displayName(memberById.get(s.memberId)!) : "—",
-              value: s.advancedCents, display: formatMoney(s.advancedCents, "ARS", { compact: true }), sub: `pagó ${s.timesPaid} ${s.timesPaid === 1 ? "gasto" : "gastos"}`,
             }))} />
           </Card>
         </section>

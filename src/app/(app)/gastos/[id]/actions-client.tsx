@@ -57,7 +57,7 @@ export function GuestPaidButton({ shareId, juntadaId, paid }: { shareId: string;
         <button
           onClick={() => run(async () => {
             const res = await setGuestPaid(shareId, juntadaId, true);
-            if (res.ok) celebrate("¡Gracias perrita!");
+            if (res.ok) celebrate("¡Gracias a la perrita invitada!", "Puede volver otra vez");
             return res;
           })}
           disabled={pending}
