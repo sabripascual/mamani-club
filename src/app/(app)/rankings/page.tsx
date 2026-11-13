@@ -28,7 +28,6 @@ function RankingCard({ r, byId, me }: { r: Ranking; byId: Map<string, Member>; m
   return (
     <Card className="flex flex-col">
       <p className="font-display text-lg leading-tight font-semibold">{r.title}</p>
-      <p className="mt-0.5 text-xs text-graphite/55">{r.description}</p>
 
       {winners.length === 0 ? (
         <p className="mt-4 rounded-2xl bg-cream/80 px-3 py-4 text-center text-sm text-graphite/55">Sin datos suficientes en este período</p>

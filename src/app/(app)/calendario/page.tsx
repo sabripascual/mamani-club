@@ -69,12 +69,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               <Link key={d} href={selected === d ? `/calendario?mes=${month}` : `/calendario?mes=${month}&dia=${d}`} scroll={false}
                 className={cn("flex aspect-square flex-col items-center justify-center rounded-xl text-sm transition",
                   selected === d ? "bg-graphite text-cream" : isToday ? "bg-lime font-bold" : "hover:bg-graphite/5",
-                  isHoliday && selected !== d && "text-rose-dark")}>
+                  isHoliday && selected !== d && "text-holiday")}>
                 <span className={cn(isHoliday && "font-semibold")}>{Number(d.slice(8))}</span>
                 <span className="mt-0.5 flex h-1.5 gap-0.5">
                   {!!info?.events.length && <span className="size-1.5 rounded-full bg-rose" />}
-                  {!!info?.birthdays.length && <span className="size-1.5 rounded-full bg-chart-2" />}
-                  {isHoliday && <span className="size-1.5 rounded-full bg-graphite/40" />}
+                  {!!info?.birthdays.length && <span className="size-1.5 rounded-full bg-birthday" />}
+                  {isHoliday && <span className="size-1.5 rounded-full bg-holiday" />}
                 </span>
               </Link>
             );
@@ -82,8 +82,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         </div>
         <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-graphite/60">
           <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-rose" /> Eventos</span>
-          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-chart-2" /> Cumpleaños</span>
-          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-graphite/40" /> Feriados</span>
+          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-birthday" /> Cumpleaños</span>
+          <span className="flex items-center gap-1"><span className="size-2 rounded-full bg-holiday" /> Feriados</span>
         </div>
       </section>
 

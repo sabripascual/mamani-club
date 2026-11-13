@@ -314,6 +314,11 @@ tests/e2e/             Playwright
   autocompletar). Prioriza resultados cerca de Buenos Aires. El mapa sigue siendo el
   embebido de Google, sin API paga. Lo que se guarda es el texto elegido.
 - **ADR-028** Eventos de todo el día y con hora de fin (migración 0013: `all_day`, `ends_at`).
+- **ADR-029** Rankings finales: "No se pierde una", "Fantasma 👻", "De qué vive??" y "El roedor".
+  "El roedor" = avisos de deuda ("debtor") que le llegaron, dentro del período elegido. Como
+  el historial de notificaciones es solo de admins, `debt_reminders_sent()` (migración 0014)
+  expone únicamente integrante y día de esos avisos. Se quitaron "La reina del tercer tiempo"
+  y "La que más gastos cargó". Las tarjetas muestran solo el título.
 
 ## 10. Riesgos y limitaciones conocidas
 

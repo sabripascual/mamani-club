@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { Dataset, Filters, StatAttendee, StatGasto, StatJuntada, StatNet, StatRsvp, StatSettlement, StatShare } from "./compute";
+import type { Dataset, Filters, StatAttendee, StatGasto, StatJuntada, StatNet, StatDebtReminder, StatRsvp, StatSettlement, StatShare } from "./compute";
 
 const AR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -21,7 +21,7 @@ async function fetchAll<T>(build: () => Q): Promise<T[]> {
 /** Juntadas activas con sus gastos, partes, asistentes, saldos y transferencias. Los filtros se aplican en compute.ts. */
 export const loadDataset = cache(async (): Promise<Dataset> => {
   const supabase = await createClient();
-  const [juntadas, gastos, shares, attendees, nets, settlements, { data: categories }, { data: members }, events, rsvps] = await Promise.all([
+  const [juntadas, gastos, shares, attendees, nets, settlements, { data: categories }, { data: members }, events, rsvps, debtReminders] = await Promise.all([
     fetchAll<StatJuntada>(() => supabase.from("juntadas").select("id, title, occurred_on, type_id, created_by").eq("status", "active").order("occurred_on") as unknown as Q),
     fetchAll<StatGasto>(() => supabase.from("expenses").select("id, juntada_id, category_id, base_amount_cents, fx_rate, paid_by, created_by").eq("status", "active").order("id") as unknown as Q),
     fetchAll<StatShare>(() => supabase.from("expense_shares").select("expense_id, member_id, amount_cents, is_participant, guest_name").order("id") as unknown as Q),
@@ -33,6 +33,8 @@ export const loadDataset = cache(async (): Promise<Dataset> => {
     // Solo eventos que ya pasaron: a uno futuro todavía se puede responder.
     fetchAll<{ id: string; starts_at: string; type_id: string | null }>(() => supabase.from("events").select("id, starts_at, type_id").eq("status", "active").lte("starts_at", new Date().toISOString()).order("id") as unknown as Q),
     fetchAll<StatRsvp>(() => supabase.from("event_rsvps").select("event_id, member_id, response").order("event_id") as unknown as Q),
+    // Avisos de deuda enviados (para "El roedor"); el historial completo solo lo ven las admins.
+    fetchAll<StatDebtReminder>(() => supabase.rpc("debt_reminders_sent").order("sent_on") as unknown as Q),
   ]);
   // Solo gastos de juntadas activas (los de juntadas anuladas también quedan anulados, pero por las dudas).
   const active = new Set(juntadas.map((j) => j.id));
@@ -47,6 +49,7 @@ export const loadDataset = cache(async (): Promise<Dataset> => {
     settlements: settlements.filter((x) => active.has(x.juntada_id)).map((x) => ({ ...x, amount_cents: Number(x.amount_cents) })),
     events: events.map((e) => ({ id: e.id, day: AR.format(new Date(e.starts_at)), type_id: e.type_id })),
     rsvps,
+    debtReminders,
     categories: categories ?? [],
     members: members ?? [],
   };
