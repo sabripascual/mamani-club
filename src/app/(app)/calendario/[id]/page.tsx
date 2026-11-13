@@ -48,7 +48,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       <Card className="mb-6">
         <p className="mb-3 font-semibold">¿Vas?</p>
-        <RsvpButtons eventId={e.id} current={mine} />
+        <RsvpButtons eventId={e.id} current={mine} title={e.title} />
       </Card>
 
       {e.juntada_id ? (

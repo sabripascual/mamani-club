@@ -330,6 +330,10 @@ tests/e2e/             Playwright
 - **ADR-032** Importes: además de la coma, se acepta punto decimal cuando le siguen 1 o 2
   dígitos al final ("1500.50"), porque muchos teclados de teléfono solo tienen punto. Con 3
   dígitos sigue siendo separador de miles. Los totales de juntada se muestran con centavos.
+- **ADR-033** Cierres con confirmación: responder a un evento es elegir + "Confirmar" (pantalla
+  de confirmación y vuelta al inicio). Crear una juntada (o convertir un evento) lleva a
+  `/gastos/[id]/creada` con el resumen, "Agregar gasto" y "Finalizar e ir al inicio"; finalizar
+  avisa a las de la juntada (con gastos: cuánto debe cada una; sin gastos: que se armó).
 
 ## 10. Riesgos y limitaciones conocidas
 

@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseMoney } from "@/lib/money/format";
-import { notifyGastoLoaded, notifyGuestPaid, notifyLoadFinished, notifyPaid } from "@/lib/push/expense-alerts";
+import { notifyGastoLoaded, notifyGuestPaid, notifyJuntadaCreated, notifyLoadFinished, notifyPaid } from "@/lib/push/expense-alerts";
 
 export type FormState = { error?: string; fields?: Partial<Record<string, string>> };
 export type ActionResult = { ok: boolean; error?: string };
@@ -219,7 +219,7 @@ export async function createJuntada(_: FormState, formData: FormData): Promise<F
     if (user) after(() => notifyGastoLoaded(gastoId as string, juntadaId, parts, user.id).catch(() => {}));
   }
   refresh(juntadaId);
-  redirect(`/gastos/${juntadaId}`);
+  redirect(`/gastos/${juntadaId}/creada`);
 }
 
 export async function updateJuntada(juntadaId: string, _: FormState, formData: FormData): Promise<FormState> {
@@ -293,18 +293,22 @@ export async function voidSettlement(settlementId: string, juntadaId: string, re
   return { ok: true };
 }
 
-/** "Terminé de cargar": cierra la carga de quien estuvo cargando gastos y avisa a la juntada. */
-export async function finishLoading(juntadaId: string): Promise<ActionResult & { title?: string }> {
+/**
+ * "Terminé de cargar" / "Finalizar": cierra la carga y avisa a la juntada. Si cargué gastos,
+ * el aviso dice cuántos y cuánto debe cada una; si solo creé la juntada, avisa que se armó.
+ */
+export async function finishLoading(juntadaId: string): Promise<ActionResult & { title?: string; withGastos?: boolean }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Tu sesión expiró" };
   const [{ data: j }, { count }] = await Promise.all([
-    supabase.from("juntadas").select("title, status").eq("id", juntadaId).maybeSingle(),
+    supabase.from("juntadas").select("title, status, created_by").eq("id", juntadaId).maybeSingle(),
     supabase.from("expenses").select("id", { count: "exact", head: true }).eq("juntada_id", juntadaId).eq("status", "active").eq("created_by", user.id),
   ]);
   if (!j || j.status !== "active") return { ok: false, error: "La juntada no existe o está anulada" };
-  if (!count) return { ok: false, error: "Todavía no cargaste gastos en esta juntada" };
-  after(() => notifyLoadFinished(juntadaId, user.id).catch(() => {}));
+  const withGastos = !!count;
+  if (!withGastos && j.created_by !== user.id) return { ok: false, error: "Todavía no cargaste gastos en esta juntada" };
+  after(() => (withGastos ? notifyLoadFinished(juntadaId, user.id) : notifyJuntadaCreated(juntadaId, user.id)).catch(() => {}));
   revalidatePath("/", "layout");
-  return { ok: true, title: j.title as string };
+  return { ok: true, title: j.title as string, withGastos };
 }

@@ -172,8 +172,10 @@ export function VoidJuntadaButton({ juntadaId, disabled }: { juntadaId: string; 
   );
 }
 
-/** "Terminé de cargar": avisa a la juntada, celebra y vuelve al inicio. */
-export function FinishLoadingButton({ juntadaId }: { juntadaId: string }) {
+/** "Terminé de cargar" / "Finalizar": avisa a la juntada, celebra y vuelve al inicio. */
+export function FinishLoadingButton({ juntadaId, label = "Terminé de cargar", hint = "Avisa a todas las de la juntada y te lleva al inicio." }: {
+  juntadaId: string; label?: string; hint?: string;
+}) {
   const router = useRouter();
   const { pending, error, run } = useAction();
   return (
@@ -182,7 +184,9 @@ export function FinishLoadingButton({ juntadaId }: { juntadaId: string }) {
         onClick={() => run(async () => {
           const res = await finishLoading(juntadaId);
           if (res.ok) {
-            celebrate("¡Listo, reina!", `Terminaste de cargar ${res.title ?? "la juntada"}. Ya les avisamos a todas.`);
+            const name = res.title ?? "la juntada";
+            if (res.withGastos) celebrate("¡Listo, reina!", `Terminaste de cargar ${name}. Ya les avisamos a todas.`);
+            else celebrate("¡Juntada creada! 🎉", `${name} ya está armada. Les avisamos a las que van.`);
             router.push("/");
           }
           return res;
@@ -190,9 +194,9 @@ export function FinishLoadingButton({ juntadaId }: { juntadaId: string }) {
         disabled={pending}
         className="flex w-full items-center justify-center gap-2 rounded-full bg-graphite py-3.5 font-semibold text-cream shadow-lg shadow-graphite/20 transition active:scale-[0.99] disabled:opacity-60"
       >
-        {pending ? <Loader2 className="size-5 animate-spin" /> : <CheckCheck className="size-5" />} Terminé de cargar
+        {pending ? <Loader2 className="size-5 animate-spin" /> : <CheckCheck className="size-5" />} {label}
       </button>
-      <p className="mt-1.5 text-center text-xs text-graphite/55">Avisa a todas las de la juntada y te lleva al inicio.</p>
+      {hint && <p className="mt-1.5 text-center text-xs text-graphite/55">{hint}</p>}
       {error && <p className="mt-1 text-center text-sm text-rose-dark">{error}</p>}
     </div>
   );
