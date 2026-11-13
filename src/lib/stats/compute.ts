@@ -30,6 +30,8 @@ export type StatSettlement = { juntada_id: string; amount_cents: number; from_me
 /** Eventos ya ocurridos (para "No se pierde una" y "Fantasma"). `day` = AAAA-MM-DD en hora AR. */
 export type StatEvent = { id: string; day: string; type_id: string | null };
 export type StatRsvp = { event_id: string; member_id: string; response: "going" | "maybe" | "no" };
+/** Un aviso de deuda enviado ("Perrita deudora!" y siguientes). */
+export type StatDebtReminder = { member_id: string; sent_on: string };
 export type StatCategory = { id: string; parent_id: string | null; code: string | null; name: string; kind?: string };
 export type StatMember = { id: string; status: string };
 
@@ -42,6 +44,7 @@ export type Dataset = {
   settlements: StatSettlement[];
   events?: StatEvent[];
   rsvps?: StatRsvp[];
+  debtReminders?: StatDebtReminder[];
   categories: StatCategory[];
   members: StatMember[];
 };
@@ -79,7 +82,10 @@ export function filterDataset(ds: Dataset, f: Filters): Dataset {
       const events = (ds.events ?? []).filter((e) =>
         (!f.from || e.day >= f.from) && (!f.to || e.day <= f.to) && (!f.typeId || e.type_id === f.typeId));
       const eIds = new Set(events.map((e) => e.id));
-      return { events, rsvps: (ds.rsvps ?? []).filter((r) => eIds.has(r.event_id)) };
+      return {
+        events, rsvps: (ds.rsvps ?? []).filter((r) => eIds.has(r.event_id)),
+        debtReminders: (ds.debtReminders ?? []).filter((r) => (!f.from || r.sent_on >= f.from) && (!f.to || r.sent_on <= f.to)),
+      };
     })(),
   };
 }
@@ -205,6 +211,7 @@ export type MemberStat = {
   paidJuntadas: number; // juntadas en las que registró algún pago (pagó un gasto o transfirió)
   noShows: number; // eventos en los que puso "No voy" o no respondió
   unpaidJuntadas: number; // juntadas sin ningún pago suyo
+  debtReminders: number; // notificaciones de deuda que recibió
 };
 
 function relevantMembers(ds: Dataset) {
@@ -226,7 +233,7 @@ export function memberStats(ds: Dataset): MemberStat[] {
     relevantMembers(ds).map((id) => [id, {
       memberId: id, participations: 0, participationRate: 0, advancedCents: 0, timesPaid: 0, consumedCents: 0,
       avgConsumedCents: 0, created: 0, pendingCents: 0, fiestas: 0, tercerTiempo: 0,
-      going: 0, paidJuntadas: 0, noShows: 0, unpaidJuntadas: 0,
+      going: 0, paidJuntadas: 0, noShows: 0, unpaidJuntadas: 0, debtReminders: 0,
     }]),
   );
 
@@ -265,6 +272,10 @@ export function memberStats(ds: Dataset): MemberStat[] {
   for (const t of ds.settlements) if (t.from_member) markPaid(t.from_member, t.juntada_id);
   const events = ds.events ?? [];
   const answer = new Map((ds.rsvps ?? []).map((r) => [`${r.event_id}:${r.member_id}`, r.response]));
+  for (const r of ds.debtReminders ?? []) {
+    const st = stats.get(r.member_id);
+    if (st) st.debtReminders += 1;
+  }
   for (const st of stats.values()) {
     st.paidJuntadas = paidIn.get(st.memberId)?.size ?? 0;
     st.unpaidJuntadas = total - st.paidJuntadas;
@@ -302,10 +313,9 @@ export const RANKING_DEFS: RankDef[] = [
     value: (s) => s.going + s.paidJuntadas, detail: (s) => `${s.going} “Voy” · ${s.paidJuntadas} juntadas con pagos` },
   { key: "ausente", title: "Fantasma 👻", description: "Eventos en los que puso “No voy” o no respondió + juntadas sin ningún pago suyo.", unit: "count", minTotal: 3, needsDifference: true,
     value: (s) => s.noShows + s.unpaidJuntadas, detail: (s) => `${s.noShows} sin ir o sin responder · ${s.unpaidJuntadas} juntadas sin pagos` },
-  { key: "tercer_tiempo", title: "La reina del tercer tiempo", description: "Más juntadas de tipo “Tercer tiempo”.", unit: "count", value: (s) => s.tercerTiempo },
-  { key: "gastadora", title: "¿De qué vive??", description: "Suma de todos sus gastos registrados (su parte en cada gasto).", unit: "money", value: (s) => s.consumedCents },
-  { key: "creadora", title: "La que más gastos cargó", description: "Gastos registrados por ella en la app.", unit: "count", value: (s) => s.created },
-  { key: "deudora", title: "El roedor", description: "Mayor saldo total adeudado hoy.", unit: "money", value: (s) => s.pendingCents },
+  { key: "gastadora", title: "De qué vive??", description: "Suma de todos sus gastos registrados (su parte en cada gasto).", unit: "money", value: (s) => s.consumedCents },
+  { key: "deudora", title: "El roedor", description: "Notificaciones de deuda que recibió hasta la fecha.", unit: "count", value: (s) => s.debtReminders,
+    detail: (s) => `${s.debtReminders} ${s.debtReminders === 1 ? "aviso" : "avisos"} de deuda` },
 ];
 
 /** No inventa ganadoras: sin datos (o sin diferencia, en "ausente") no hay ganadora. */

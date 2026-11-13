@@ -122,11 +122,12 @@ describe("memberStats y rankings", () => {
     expect(r.ausente.title).toBe("Fantasma 👻");
     expect(r.ausente.winners.sort()).toEqual(["ana", "dani"]);
     expect(r.deudora.title).toBe("El roedor");
-    expect(r.deudora.winners).toEqual(["dani"]); // debe $25.000 + $20.000
-    expect(r.gastadora.title).toBe("¿De qué vive??");
+    expect(r.deudora.winners).toEqual([]); // sin avisos de deuda enviados, no hay roedor
+    expect(r.gastadora.title).toBe("De qué vive??");
     expect(r.fiestera).toBeUndefined();
     expect(r.promedio).toBeUndefined();
-    expect(r.tercer_tiempo.winners.sort()).toEqual(["bea", "caro"]);
+    expect(r.tercer_tiempo).toBeUndefined();
+    expect(r.creadora).toBeUndefined();
     expect(r.adelanto).toBeUndefined();
     expect(r.deportiva).toBeUndefined();
   });
@@ -147,6 +148,17 @@ describe("memberStats y rankings", () => {
     const r = Object.fromEntries(rankings(memberStats(withEvents), 4).map((x) => [x.key, x]));
     expect(r.presente.winners).toEqual(["ana"]); // 2 “Voy” + 1 juntada con pagos
     expect(r.ausente.winners).toEqual(["dani"]); // 2 + 3
+  });
+  it("El roedor: quien acumuló más avisos de deuda (respeta el período)", () => {
+    const withLog: typeof ds = { ...ds, debtReminders: [
+      { member_id: "ana", sent_on: "2026-01-11" }, { member_id: "ana", sent_on: "2026-01-13" },
+      { member_id: "dani", sent_on: "2026-01-11" }, { member_id: "dani", sent_on: "2026-03-20" }, { member_id: "dani", sent_on: "2026-03-22" },
+    ] };
+    const all = rankings(memberStats(withLog), 4).find((x) => x.key === "deudora")!;
+    expect(all.winners).toEqual(["dani"]);
+    expect(all.rows[0].detail).toBe("3 avisos de deuda");
+    const jan = filterDataset(withLog, { to: "2026-01-31" });
+    expect(rankings(memberStats(jan), jan.juntadas.length).find((x) => x.key === "deudora")!.winners).toEqual(["ana"]);
   });
   it("el filtro de período también filtra eventos", () => {
     const f = filterDataset({ ...ds, events: [{ id: "e1", day: "2026-02-01", type_id: null }], rsvps: [{ event_id: "e1", member_id: "ana", response: "going" }] }, { to: "2026-01-31" });
