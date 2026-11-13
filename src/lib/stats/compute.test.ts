@@ -114,7 +114,7 @@ describe("memberStats y rankings", () => {
     expect(by("ana").pendingCents).toBe(2500000 + 1500000);
     expect(by("bea").pendingCents).toBe(0);
   });
-  it("rankings por tipo de juntada (fiestera, tercer tiempo) y sin ranking deportivo", () => {
+  it("rankings (tercer tiempo) y sin deportiva, fiestera, promedio ni adelanto", () => {
     const r = Object.fromEntries(rankings(stats, 4).map((x) => [x.key, x]));
     // Juntadas con pagos: ana 1, bea 2, caro 2 (transfirió en el asado + pagó en el tercer), dani 1.
     expect(r.presente.title).toBe("No se pierde una");
@@ -124,9 +124,10 @@ describe("memberStats y rankings", () => {
     expect(r.deudora.title).toBe("El roedor");
     expect(r.deudora.winners).toEqual(["dani"]); // debe $25.000 + $20.000
     expect(r.gastadora.title).toBe("¿De qué vive??");
-    expect(r.fiestera.winners.sort()).toEqual(["ana", "caro"]);
+    expect(r.fiestera).toBeUndefined();
+    expect(r.promedio).toBeUndefined();
     expect(r.tercer_tiempo.winners.sort()).toEqual(["bea", "caro"]);
-    expect(r.adelanto.winners).toEqual(["bea"]);
+    expect(r.adelanto).toBeUndefined();
     expect(r.deportiva).toBeUndefined();
   });
   it("eventos: “Voy” suma a No se pierde una; “No voy” o sin responder, a Fantasma", () => {

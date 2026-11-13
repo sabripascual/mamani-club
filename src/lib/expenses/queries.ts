@@ -180,3 +180,16 @@ export async function getMemberMovements(memberId: string) {
     })
     .sort((a, b) => b.juntada.occurred_on.localeCompare(a.juntada.occurred_on));
 }
+
+/** Invitadas que ya están en gastos de la juntada (para sugerirlas y no tipearlas distinto). */
+export async function getJuntadaGuests(juntadaId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("expense_shares").select("guest_name, member_id, expenses!inner(juntada_id, status)")
+    .not("guest_name", "is", null).eq("expenses.juntada_id", juntadaId).eq("expenses.status", "active");
+  const seen = new Map<string, { name: string; responsible_id: string }>();
+  for (const r of (data ?? []) as unknown as { guest_name: string; member_id: string }[]) {
+    const k = `${r.member_id}|${r.guest_name.trim().toLowerCase()}`;
+    if (!seen.has(k)) seen.set(k, { name: r.guest_name, responsible_id: r.member_id });
+  }
+  return [...seen.values()];
+}

@@ -6,22 +6,34 @@ import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { FormState } from "@/lib/expenses/actions";
-import { arToIso, type Rsvp } from "./types";
+import { arEndIso, arToIso, type Rsvp } from "./types";
 import { notifyNewEvent } from "@/lib/push/calendar-daily";
 import { pushConfigured } from "@/lib/push/send";
 
 const schema = z.object({
   title: z.string().trim().min(1, "Ponele un nombre al evento").max(80),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elegí la fecha"),
-  time: z.string().regex(/^\d{2}:\d{2}$/, "Elegí la hora"),
+  all_day: z.boolean(),
+  time: z.string(),
+  end_time: z.string().regex(/^(\d{2}:\d{2})?$/, "Hora inválida"),
   type_id: z.string().uuid("Elegí el tipo"),
   location: z.string().trim().max(200).optional().transform((v) => v || null),
   description: z.string().trim().max(500).optional().transform((v) => v || null),
+}).superRefine((d, ctx) => {
+  if (!d.all_day && !/^\d{2}:\d{2}$/.test(d.time)) ctx.addIssue({ code: "custom", path: ["time"], message: "Elegí la hora (o marcá “Todo el día”)" });
+  if (!d.all_day && d.end_time && d.end_time === d.time) ctx.addIssue({ code: "custom", path: ["end_time"], message: "La hora de fin tiene que ser distinta del inicio" });
 });
+
+/** Inicio y fin en ISO (todo el día = 00:00 sin fin). */
+function times(d: z.infer<typeof schema>) {
+  if (d.all_day) return { p_starts_at: arToIso(d.date, "00:00"), p_all_day: true, p_ends_at: null };
+  return { p_starts_at: arToIso(d.date, d.time), p_all_day: false, p_ends_at: arEndIso(d.date, d.time, d.end_time) };
+}
 
 function read(fd: FormData) {
   return schema.safeParse({
-    title: fd.get("title") ?? "", date: fd.get("date") ?? "", time: fd.get("time") ?? "", type_id: fd.get("type_id") ?? "",
+    title: fd.get("title") ?? "", date: fd.get("date") ?? "", all_day: fd.get("all_day") === "on",
+    time: String(fd.get("time") ?? ""), end_time: String(fd.get("end_time") ?? ""), type_id: fd.get("type_id") ?? "",
     location: fd.get("location") ?? "", description: fd.get("description") ?? "",
   });
 }
@@ -37,7 +49,7 @@ export async function createEvent(_: FormState, fd: FormData): Promise<FormState
   if (!p.success) return { fields: errs(p.error) };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_event", {
-    p_title: p.data.title, p_starts_at: arToIso(p.data.date, p.data.time), p_type_id: p.data.type_id,
+    p_title: p.data.title, ...times(p.data), p_type_id: p.data.type_id,
     p_location: p.data.location, p_description: p.data.description,
   });
   if (error) return { error: error.message };
@@ -52,7 +64,7 @@ export async function updateEvent(id: string, _: FormState, fd: FormData): Promi
   if (!p.success) return { fields: errs(p.error) };
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_event", {
-    p_event_id: id, p_title: p.data.title, p_starts_at: arToIso(p.data.date, p.data.time), p_type_id: p.data.type_id,
+    p_event_id: id, p_title: p.data.title, ...times(p.data), p_type_id: p.data.type_id,
     p_location: p.data.location, p_description: p.data.description,
   });
   if (error) return { error: error.message };

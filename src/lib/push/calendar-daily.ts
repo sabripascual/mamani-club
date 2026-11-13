@@ -35,14 +35,14 @@ async function deliver(plan: Planned[], today: string) {
 
 async function eventInfos(fromDay: string, toDay: string) {
   const admin = createAdminClient();
-  const { data: events } = await admin.from("events").select("id, title, starts_at, location").eq("status", "active")
+  const { data: events } = await admin.from("events").select("id, title, starts_at, ends_at, all_day, location").eq("status", "active")
     .gte("starts_at", `${fromDay}T00:00:00-03:00`).lte("starts_at", `${toDay}T23:59:59-03:00`);
   const ids = (events ?? []).map((e) => e.id as string);
   const { data: rsvps } = ids.length
     ? await admin.from("event_rsvps").select("event_id, member_id, response").in("event_id", ids).in("response", ["going", "maybe"])
     : { data: [] };
   return (events ?? []).map((e) => ({
-    id: e.id as string, title: e.title as string, day: AR.format(new Date(e.starts_at)), time: ARTIME.format(new Date(e.starts_at)),
+    id: e.id as string, title: e.title as string, day: AR.format(new Date(e.starts_at)), time: ARTIME.format(new Date(e.starts_at)) + (e.ends_at ? ` a ${ARTIME.format(new Date(e.ends_at))}` : ""), allDay: !!e.all_day,
     location: e.location as string | null, attendees: (rsvps ?? []).filter((r) => r.event_id === e.id).map((r) => r.member_id as string),
   }));
 }
@@ -82,18 +82,21 @@ export async function sendBroadcast(recipients: string[], title: string, body: s
   return deliver(plan, today);
 }
 
+const DAY = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", weekday: "long", day: "numeric", month: "long" });
 const WHEN = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", hour12: false });
 
 /** Al crear un evento: aviso a todo el grupo (menos a quien lo creó) con una frase al azar. */
 export async function notifyNewEvent(eventId: string, creatorId: string) {
   const admin = createAdminClient();
   const [{ data: e }, { data: people }, { data: pool }] = await Promise.all([
-    admin.from("events").select("id, title, starts_at").eq("id", eventId).maybeSingle(),
+    admin.from("events").select("id, title, starts_at, all_day").eq("id", eventId).maybeSingle(),
     admin.from("profiles").select("id").eq("status", "active"),
     admin.from("notification_messages").select("id, title, body, last_sent_at").eq("kind", "event_new").eq("active", true),
   ]);
   if (!e) return 0;
-  const when = WHEN.format(new Date(e.starts_at)).replace(/^./, (c) => c.toUpperCase()) + " h";
+  const when = e.all_day
+    ? DAY.format(new Date(e.starts_at)).replace(/^./, (c) => c.toUpperCase()) + " · todo el día"
+    : WHEN.format(new Date(e.starts_at)).replace(/^./, (c) => c.toUpperCase()) + " h";
   // Al azar, pero nunca la misma frase que en el evento anterior.
   const msgs = (pool ?? []) as (Msg & { last_sent_at: string | null })[];
   const last = msgs.filter((m) => m.last_sent_at).sort((a, b) => b.last_sent_at!.localeCompare(a.last_sent_at!))[0]?.id ?? null;

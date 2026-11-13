@@ -22,7 +22,9 @@ export default async function NewGastoPage({ params }: { params: Promise<{ id: s
     <>
       <Link href={`/gastos/${id}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite"><ArrowLeft className="size-4" /> {data.juntada.title}</Link>
       <PageHeader eyebrow="Agregar gasto" title="¿Qué se pagó?" />
-      <GastoForm action={createGasto.bind(null, id)} categories={tree} members={members} meId={profile.id} attendees={data.attendees} myAliases={myAliases.get(profile.id) ?? []} />
+      <GastoForm action={createGasto.bind(null, id)} categories={tree} members={members} meId={profile.id} attendees={data.attendees} myAliases={myAliases.get(profile.id) ?? []}
+        knownGuests={data.shares.filter((s) => s.guest_name).map((s) => ({ name: s.guest_name!, responsible_id: s.member_id }))
+          .filter((g, i, all) => all.findIndex((x) => x.responsible_id === g.responsible_id && x.name.toLowerCase() === g.name.toLowerCase()) === i)} />
     </>
   );
 }

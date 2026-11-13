@@ -30,6 +30,12 @@
   color-scheme: light;
 }
 
+/* La página nunca se desliza de costado ni "rebota" (la barra de abajo queda fija). */
+html, body {
+  overflow-x: clip;
+  overscroll-behavior: none;
+}
+
 body {
   background: var(--color-cream);
   color: var(--color-graphite);

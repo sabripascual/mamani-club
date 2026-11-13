@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
-import { getCategories, getGasto, getMembers } from "@/lib/expenses/queries";
+import { getCategories, getGasto, getJuntadaGuests, getMembers } from "@/lib/expenses/queries";
 import { updateGasto } from "@/lib/expenses/actions";
 import { PageHeader } from "@/components/ui/page-header";
 import { GastoForm } from "@/components/expenses/gasto-form";
@@ -16,7 +16,7 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
   const { id, gastoId } = await params;
   if (!/^[0-9a-f-]{36}$/.test(gastoId)) notFound();
   const { profile } = await requireActiveMember();
-  const [data, { tree }, { members }, myAliases] = await Promise.all([getGasto(gastoId), getCategories(), getMembers(), getAliases([profile.id])]);
+  const [data, { tree }, { members }, myAliases, knownGuests] = await Promise.all([getGasto(gastoId), getCategories(), getMembers(), getAliases([profile.id]), getJuntadaGuests(id)]);
   if (!data || data.gasto.juntada_id !== id) notFound();
   const { gasto: g, shares } = data;
   // La base también lo valida: quien lo cargó, quien lo pagó, la responsable de una invitada o una admin.
@@ -33,6 +33,7 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
         meId={profile.id}
         attendees={[]}
         myAliases={myAliases.get(profile.id) ?? []}
+        knownGuests={knownGuests}
         initial={{
           title: g.title, category_id: g.category_id, subcategory_id: g.subcategory_id, description: g.description,
           amount_cents: g.amount_cents, paid_by: g.paid_by, split_type: g.split_type, refund_alias: g.refund_alias,

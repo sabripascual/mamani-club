@@ -38,7 +38,7 @@ const guestUnit = (g: Guest) => `${g.responsible}|${g.name.trim().toLowerCase()}
  * (primer gasto) sin chocar nombres. Las participantes arrancan con las asistentes.
  */
 export function GastoFields({
-  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {}, myAliases = [],
+  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {}, myAliases = [], knownGuests = [],
 }: {
   prefix?: string;
   categories: CategoryTree;
@@ -49,6 +49,8 @@ export function GastoFields({
   errors?: Partial<Record<string, string>>;
   /** Mis alias, para elegir a cuál me devuelven si pagué yo. */
   myAliases?: MyAlias[];
+  /** Invitadas que ya están en otros gastos de la juntada: se sugieren para no cargarlas dos veces. */
+  knownGuests?: { name: string; responsible_id: string }[];
 }) {
   const n = (k: string) => `${prefix}${k}`;
   const f = (k: string) => errors[n(k)];
@@ -77,6 +79,9 @@ export function GastoFields({
   const preview = amountCents ? equalSplit(amountCents, [...participants, ...guests.map(guestUnit)]) : new Map<string, number>();
   const cents = (v?: string) => (v?.trim() === "0" ? 0 : (parseMoney(v ?? "") ?? 0));
   const customSum = participants.reduce((acc, id) => acc + cents(custom[id]), 0) + guests.reduce((acc, g) => acc + cents(custom[`guest:${g.key}`]), 0);
+  const isIn = (g: { name: string; responsible_id: string }) =>
+    guests.some((x) => x.responsible === g.responsible_id && x.name.trim().toLowerCase() === g.name.trim().toLowerCase());
+  const suggestions = knownGuests.filter((g) => !isIn(g));
   const setGuest = (key: string, patch: Partial<Guest>) => setGuests((gs) => gs.map((g) => (g.key === key ? { ...g, ...patch } : g)));
   const guestOf = (id: string) => (id === meId ? "tu invitada" : `invitada de ${displayName(members.find((x) => x.id === id) ?? { first_name: "—" })}`);
   const remaining = (amountCents ?? 0) - customSum;
@@ -96,7 +101,7 @@ export function GastoFields({
   return (
     <div className="flex flex-col gap-6">
       <fieldset>
-        <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Qué se compró?</legend>
+        <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Qué pagaste reina?</legend>
         <input type="hidden" name={n("category_id")} value={categoryId} />
         {/* El nombre del gasto es la subcategoría elegida (o la categoría si no tiene). */}
         <input type="hidden" name={n("title")} value={selectedSub?.name ?? (selectedCategory && selectedCategory.children.length === 0 ? selectedCategory.name : "")} />
@@ -206,11 +211,25 @@ export function GastoFields({
       <fieldset>
         <legend className="mb-1 text-sm font-semibold text-graphite/80">Invitadas <span className="font-normal text-graphite/50">(opcional)</span></legend>
         <p className="mb-3 text-xs text-graphite/55">Alguien que no es del club. Paga su parte directo a quien pagó el gasto; su responsable (o una admin) marca cuando pagó. No suma presencia ni consumo.</p>
+        {suggestions.length > 0 && (
+          <div className="mb-3 rounded-2xl bg-lime/40 p-3 ring-1 ring-lime">
+            <p className="mb-2 text-xs font-semibold text-graphite/75">Ya están en esta juntada. ¿Las sumás a este gasto?</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((g) => (
+                <button type="button" key={`${g.responsible_id}|${g.name}`}
+                  onClick={() => setGuests((gs) => [...gs, { key: newKey(), name: g.name, responsible: g.responsible_id }])}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-semibold ring-1 ring-graphite/10 hover:ring-rose">
+                  <UserPlus className="size-3.5" /> {g.name} <span className="font-normal text-graphite/55">· {guestOf(g.responsible_id)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {guests.length > 0 && (
           <ul className="mb-3 flex flex-col gap-2">
             {guests.map((g) => (
               <li key={g.key} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/60 p-2 ring-1 ring-graphite/5">
-                <input name={n("guest_name")} value={g.name} onChange={(e) => setGuest(g.key, { name: e.target.value })} maxLength={40}
+                <input name={n("guest_name")} value={g.name} onChange={(e) => setGuest(g.key, { name: e.target.value })} maxLength={40} list={knownGuests.length ? n("known_guests") : undefined}
                   placeholder="Nombre" aria-label="Nombre de la invitada" required
                   className="h-10 min-w-0 flex-1 rounded-xl border border-graphite/10 bg-white px-3 outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
                 <label className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-graphite/60">
@@ -227,6 +246,9 @@ export function GastoFields({
               </li>
             ))}
           </ul>
+        )}
+        {knownGuests.length > 0 && (
+          <datalist id={n("known_guests")}>{knownGuests.map((g) => <option key={`${g.responsible_id}|${g.name}`} value={g.name} />)}</datalist>
         )}
         <button type="button" onClick={() => setGuests((gs) => [...gs, { key: newKey(), name: "", responsible: meId }])}
           className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white/70 px-4 text-sm font-semibold text-rose-dark ring-1 ring-rose/30 hover:bg-white">

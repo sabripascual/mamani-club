@@ -49,6 +49,7 @@ describe("eventos", () => {
   it("la víspera y el mismo día, a quienes van", () => {
     expect(planEventReminders("2026-11-12", ev, "eve").map((x) => [x.member_id, x.title])).toEqual([["ana", "Mañana: Asado"], ["flor", "Mañana: Asado"]]);
     expect(planEventReminders("2026-11-13", ev, "day")[0].body).toBe("A las 21:00 h en Lo de Caro. ¡Nos vemos!");
+    expect(planEventReminders("2026-11-13", [{ ...ev[0], allDay: true }], "day")[0].body).toBe("Todo el día en Lo de Caro. ¡Nos vemos!");
     expect(planEventReminders("2026-11-12", ev, "day")).toEqual([]);
   });
   it("addDays cruza meses y años", () => {

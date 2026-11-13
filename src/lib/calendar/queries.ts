@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { displayName } from "@/lib/utils";
 import type { Birthday, CalendarEvent, Holiday, Rsvp } from "./types";
 
-const EVENT_COLS = "id, title, starts_at, type_id, location, description, created_by, status, juntada_id, created_at";
+const EVENT_COLS = "id, title, starts_at, ends_at, all_day, type_id, location, description, created_by, status, juntada_id, created_at";
 
 /** Eventos, cumpleaños y feriados entre dos fechas (inclusive, en hora argentina). */
 export async function getCalendarRange(from: string, to: string, me: string) {

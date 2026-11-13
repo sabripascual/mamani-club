@@ -8,11 +8,11 @@ const PIECES = Array.from({ length: 18 }, (_, i) => {
   return { dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist, r: (i * 47) % 360, lime: i % 2 === 0 };
 });
 
-/** Celebración a pantalla completa: tilde rosa + mensaje (~3 s). Se puede cerrar tocando. */
+/** Celebración a pantalla completa: tilde rosa + mensaje (~5 s). Se puede cerrar tocando. */
 export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, onDone }: { message?: string; subtitle?: string; onDone: () => void }) {
   useEffect(() => {
     navigator.vibrate?.(40);
-    const t = setTimeout(onDone, 3200);
+    const t = setTimeout(onDone, 5000);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -22,7 +22,7 @@ export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, o
       aria-live="polite"
       onClick={onDone}
       className="mc-anim fixed inset-0 z-[70] flex cursor-pointer items-center justify-center bg-cream/70 backdrop-blur-sm"
-      style={{ animation: "mc-fade 3.2s ease-out forwards" }}
+      style={{ animation: "mc-fade 5s ease-out forwards" }}
     >
       <div className="relative flex flex-col items-center" style={{ animation: "mc-pop 0.5s cubic-bezier(.2,1.4,.4,1) both" }}>
         {PIECES.map((p, i) => (

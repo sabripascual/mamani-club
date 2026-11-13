@@ -308,6 +308,12 @@ tests/e2e/             Playwright
   algún pago registrado (pagó un gasto o transfirió); "Fantasma 👻" = "No voy" o sin
   responder en eventos ya ocurridos + juntadas sin pagos suyos; "El roedor" = mayor saldo
   adeudado; "¿De qué vive??" = suma de su parte en todos los gastos.
+  Se quitaron "La más fiestera", "La que más plata adelantó" y "Más consumo promedio".
+- **ADR-027** Ubicación con sugerencias: Photon (photon.komoot.io, datos de OpenStreetMap,
+  gratis y sin clave, pensado para buscar mientras se escribe; Nominatim no permite
+  autocompletar). Prioriza resultados cerca de Buenos Aires. El mapa sigue siendo el
+  embebido de Google, sin API paga. Lo que se guarda es el texto elegido.
+- **ADR-028** Eventos de todo el día y con hora de fin (migración 0013: `all_day`, `ends_at`).
 
 ## 10. Riesgos y limitaciones conocidas
 
