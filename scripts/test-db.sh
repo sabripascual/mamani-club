@@ -11,6 +11,15 @@ cd "$(dirname "$0")/.."
 export PGUSER="${PGUSER:-postgres}"
 run() { psql -X -q -v ON_ERROR_STOP=1 "$@"; }
 fail=0
+
+# Supabase rechaza DELETE/UPDATE sin WHERE en las llamadas de la app (pg-safeupdate), aun
+# dentro de funciones. Postgres local no tiene esa extensión: lo chequeamos a mano en las
+# migraciones nuevas (la 0016 ya está aplicada y su arreglo es la 0017).
+unsafe=$(for m in supabase/migrations/*.sql; do
+  [[ "$(basename "$m" | cut -d_ -f1)" < "0017" ]] && continue
+  grep -nHiE '^[[:space:]]*delete[[:space:]]+from[[:space:]]+[a-z_."]+[[:space:]]*;' "$m" || true
+done)
+if [[ -n "$unsafe" ]]; then echo "▶ DELETE sin WHERE (Supabase lo rechaza desde la app):"; echo "$unsafe"; fail=1; fi
 for test in supabase/tests/0*.test.sql; do
   base="$(basename "$test" .test.sql)"
   num="${base%%_*}"

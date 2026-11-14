@@ -24,7 +24,8 @@
 | 0013_eventos_horario.sql | Eventos de todo el día y con hora de fin | ✅ |
 | 0014_roedor.sql | Cantidad de avisos de deuda enviados por integrante (ranking "El roedor") | ✅ |
 | 0015_eventos_desde_hasta_y_cron.sql | Eventos desde/hasta (varios días) y registro de corridas del cron | ✅ |
-| 0016_cuotitas.sql | Las Cuotitas: compras con tarjeta en cuotas y préstamos, tarjetas (solo marca) | ⏳ |
+| 0016_cuotitas.sql | Las Cuotitas: compras con tarjeta en cuotas y préstamos, tarjetas (solo marca) | ✅ |
+| 0017_arreglo_cuotitas_safeupdate.sql | Arreglo: cargar cuotitas desde la app ("DELETE requires a WHERE clause") | ⏳ |
 
 ## Correr las pruebas localmente
 
