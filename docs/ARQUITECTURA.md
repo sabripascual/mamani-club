@@ -346,6 +346,17 @@ tests/e2e/             Playwright
   OFL) y el logo se guardan en `public/` y el service worker los precachea (v5).
 - **ADR-037** Inicio: solo Grupo/Yo + año y mes (por defecto, los actuales). Balances: solo
   "Quién le debe a quién".
+- **ADR-038** Las Cuotitas (migración 0016), aparte de juntadas y gastos:
+  - `member_cards`: solo marca y nombre opcional (sin números, validado en la base).
+  - `cuotitas` → `cuotita_parts` (parte de cada participante) → `cuotita_installments` (cuotas
+    de cada deudora; la parte de quien pagó no genera cuotas). División al centavo: partes con
+    `compute_shares_v2` y cada parte en N cuotas (los centavos que sobran, a las primeras).
+  - Escritura solo por funciones (`create_cuotita`, `update_cuotita`, `void_cuotita`,
+    `set_installments_paid`), auditadas. Con cuotas pagadas solo se editan nombre, tarjeta,
+    alias y detalle. Marcan pagos quien debe, quien cobra o una admin.
+  - Recordatorios en el cron de las 10:00: deudoras del 1 al 5 y después cada 3 días mientras
+    deban (también atrasadas); quien cobra, el 1 y desde el 5 cada 3 días. Cuentan para
+    "El roedor" (`debt_reminders_sent` incluye `cuotita`).
 
 ## 10. Riesgos y limitaciones conocidas
 

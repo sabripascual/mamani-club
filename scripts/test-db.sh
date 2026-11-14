@@ -22,7 +22,9 @@ for test in supabase/tests/0*.test.sql; do
     mnum="$(basename "$m" | cut -d_ -f1)"
     if [[ "$mnum" > "$num" ]]; then break; fi
     if [[ "$mnum" == "$num" && -f "$seed" ]]; then run -d "$db" -f "$seed" >/dev/null; fi
-    run -d "$db" -f "$m" >/dev/null 2>"/tmp/mig_$$.log" || { echo "▶ $base: falló la migración $(basename "$m")"; cat "/tmp/mig_$$.log"; fail=1; continue 2; }
+    # -1: todo el archivo en una sola transacción, como el SQL Editor de Supabase (así se
+    # detecta, por ejemplo, usar un valor nuevo de un enum en la misma corrida).
+    run -1 -d "$db" -f "$m" >/dev/null 2>"/tmp/mig_$$.log" || { echo "▶ $base: falló la migración $(basename "$m")"; cat "/tmp/mig_$$.log"; fail=1; continue 2; }
   done
   # 0002 reutiliza las usuarias que crea 0001.
   if [[ "$test" == *0002* ]]; then run -d "$db" -f supabase/tests/0001_fundamentos.test.sql >/dev/null 2>&1; fi

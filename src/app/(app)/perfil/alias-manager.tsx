@@ -30,7 +30,7 @@ export function AliasManager({ aliases }: { aliases: MemberAlias[] }) {
             <form onSubmit={(e) => { e.preventDefault(); run(() => updateAlias(a.id, editing.alias, editing.label), () => setEditing(null)); }}
               className="flex flex-col gap-2 rounded-2xl bg-white p-3 ring-2 ring-rose/40 sm:flex-row">
               <input value={editing.alias} onChange={(e) => setEditing({ ...editing, alias: e.target.value })} aria-label="Alias" autoCapitalize="none" autoCorrect="off" maxLength={20} autoFocus
-                className="h-11 min-w-0 flex-1 rounded-xl border border-graphite/10 bg-white px-3 font-mono text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
+                className="h-11 min-w-0 sm:flex-1 rounded-xl border border-graphite/10 bg-white px-3 font-mono text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
               <input value={editing.label} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="Ej: Mercado Pago" aria-label="Etiqueta" maxLength={30}
                 className="h-11 min-w-0 rounded-xl border border-graphite/10 bg-white px-3 text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15 sm:w-40" />
               <div className="flex gap-2">
@@ -71,7 +71,7 @@ export function AliasManager({ aliases }: { aliases: MemberAlias[] }) {
           className="flex flex-col gap-2 rounded-2xl bg-white/50 p-3 ring-1 ring-graphite/5 sm:flex-row"
         >
           <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="tu.alias.mp" aria-label="Alias" autoCapitalize="none" autoCorrect="off" maxLength={20}
-            className="h-11 min-w-0 flex-1 rounded-xl border border-graphite/10 bg-white px-3 font-mono text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
+            className="h-11 min-w-0 sm:flex-1 rounded-xl border border-graphite/10 bg-white px-3 font-mono text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15" />
           <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ej: Mercado Pago" aria-label="Etiqueta" maxLength={30}
             className="h-11 min-w-0 rounded-xl border border-graphite/10 bg-white px-3 text-sm outline-none focus:border-rose focus:ring-4 focus:ring-rose/15 sm:w-40" />
           <button disabled={pending || !alias.trim()} className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-graphite px-4 text-sm font-semibold text-cream disabled:opacity-40">

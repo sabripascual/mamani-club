@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { MONTHS } from "@/lib/dates";
 
 /**
- * Filtro del inicio: solo año y mes (por defecto, los actuales). Se aplica al elegir.
+ * Filtro del inicio: año (el actual por defecto) y mes (por defecto, todo el año). Se aplica al elegir.
  * "Todo el año" = mes 0.
  */
 export function YearMonthFilter({ year, month, basePath, vista }: { year: number; month: number; basePath: string; vista?: string }) {
@@ -25,8 +25,8 @@ export function YearMonthFilter({ year, month, basePath, vista }: { year: number
         {years.map((y) => <option key={y} value={y}>{y}</option>)}
       </select>
       <select value={month} onChange={(e) => go(year, Number(e.target.value))} className={cls} aria-label="Mes">
-        {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
         <option value={0}>Todo el año</option>
+        {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
       </select>
     </div>
   );

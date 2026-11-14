@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth/session";
 import { pushConfigured } from "@/lib/push/send";
 import { sendBroadcast } from "@/lib/push/calendar-daily";
 import { runDailyNotifications } from "@/lib/push/daily";
+import { runCuotitaReminders } from "@/lib/push/cuotitas-alerts";
 import { logCronRun } from "@/lib/push/cron-log";
 
 export type NResult = { ok: boolean; error?: string; sent?: number };
@@ -53,15 +54,17 @@ export async function broadcast(title: string, body: string, recipients: string[
 }
 
 /**
- * Corre ahora los recordatorios de deuda (lo mismo que el cron de las 10:00). No duplica:
+ * Corre ahora los recordatorios de deuda y de cuotitas (lo mismo que el cron de las 10:00). No duplica:
  * cada aviso se manda una sola vez por día aunque se corra varias veces.
  */
 export async function runDebtRemindersNow(): Promise<NResult & { planned?: number }> {
   await requireAdmin();
   if (!pushConfigured()) return { ok: false, error: "Faltan las claves de notificaciones en Vercel." };
   try {
-    const r = await runDailyNotifications();
-    await logCronRun("manual", { ok: true, planned: r.planned, sent: r.sent });
+    const d = await runDailyNotifications();
+    const q = await runCuotitaReminders();
+    const r = { planned: d.planned + q.planned, sent: d.sent + q.sent };
+    await logCronRun("manual", { ok: true, ...r });
     revalidatePath("/admin/notificaciones");
     return { ok: true, sent: r.sent, planned: r.planned };
   } catch (e) {

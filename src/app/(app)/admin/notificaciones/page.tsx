@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Notificaciones · MAMANÍ CLUB" };
 const KIND_LABEL: Record<string, string> = {
   debtor: "Deuda", creditor: "Cobro", test: "Prueba", event: "Evento", birthday: "Cumpleaños",
   birthday_week: "Cumple en 7 días", weekly: "Frase semanal", broadcast: "Envío manual",
-  event_new: "Evento nuevo", guest_debt: "Deuda de invitada",
+  event_new: "Evento nuevo", guest_debt: "Deuda de invitada", cuotita: "Cuotita", cuotita_cobro: "Cobro de cuotitas",
 };
 const fmt = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "medium", timeStyle: "short" });
 

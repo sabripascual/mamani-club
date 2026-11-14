@@ -1,4 +1,4 @@
-import { Home, ReceiptText, Plus, Trophy, UserRound, ShieldCheck, Images, CalendarDays, type LucideIcon } from "lucide-react";
+import { Home, ReceiptText, Plus, Trophy, UserRound, ShieldCheck, Images, CalendarDays, CreditCard, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon; primary?: boolean };
 
@@ -15,6 +15,7 @@ export const ADMIN_ITEM: NavItem = { href: "/admin", label: "Admin", icon: Shiel
 /** Solo en la barra lateral de desktop (en mobile se llega desde Inicio). */
 export const MEMORIES_ITEM: NavItem = { href: "/recuerdos", label: "Manija Memories", icon: Images };
 export const RANKINGS_ITEM: NavItem = { href: "/rankings", label: "Rankings", icon: Trophy };
+export const CUOTITAS_ITEM: NavItem = { href: "/cuotitas", label: "Las Cuotitas", icon: CreditCard };
 
 export function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
