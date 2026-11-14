@@ -39,6 +39,10 @@ html, body {
   overscroll-behavior: none;
 }
 
+/* Textos que nunca se salen de la pantalla: una palabra muy larga pasa a la línea siguiente. */
+body { overflow-wrap: break-word; }
+h1, h2, h3 { text-wrap: balance; }
+
 body {
   background: var(--color-cream);
   color: var(--color-graphite);
