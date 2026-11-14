@@ -45,6 +45,10 @@ export default async function CuotitasPage() {
   const toCollect = group(due.filter((i) => byId.get(i.cuotita_id)?.paid_by === me), byId);
   const aliasesBy = await getAliases([...new Set(toPay.map((g) => g.cuotita.paid_by))]);
   const sum = (list: Installment[]) => list.reduce((a, i) => a + i.amount_cents, 0);
+  // Totales de todo lo que falta (no solo este mes).
+  const unpaid = installments.filter((i) => active.has(i.cuotita_id) && !i.paid_at);
+  const myDebt = unpaid.filter((i) => i.member_id === me);
+  const comingBack = unpaid.filter((i) => byId.get(i.cuotita_id)?.paid_by === me);
 
   const states = { activa: [] as Cuotita[], terminada: [] as Cuotita[], anulada: [] as Cuotita[] };
   for (const c of cuotitas) states[cuotitaState(c, installments)].push(c);
@@ -60,16 +64,19 @@ export default async function CuotitasPage() {
       </PageHeader>
       <ActionCard href="/cuotitas/nueva" className="mb-6" title="Nueva cuotita" subtitle="Una compra en cuotas o un préstamo" />
 
-      <div className="mb-8 grid grid-cols-2 gap-3">
+      <div className="mb-2 grid grid-cols-2 gap-3">
         <Card className="bg-rose/20">
-          <p className="text-sm text-graphite/65">Este mes pagás</p>
-          <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(sum(toPay.flatMap((g) => g.items)))}</p>
+          <p className="text-sm font-semibold">Tu deuda cuotitera 🐀</p>
+          <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(sum(myDebt))}</p>
+          <p className="mt-1 text-xs text-graphite/60">Lo que te falta pagar. Este mes: <strong className="tabular-nums">{formatMoney(sum(toPay.flatMap((g) => g.items)))}</strong></p>
         </Card>
         <Card className="bg-powder/45">
-          <p className="text-sm text-graphite/65">Este mes te pagan</p>
-          <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(sum(toCollect.flatMap((g) => g.items)))}</p>
+          <p className="text-sm font-semibold">Plata que vuelve 💸</p>
+          <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(sum(comingBack))}</p>
+          <p className="mt-1 text-xs text-graphite/60">Lo que te falta recuperar. Este mes: <strong className="tabular-nums">{formatMoney(sum(toCollect.flatMap((g) => g.items)))}</strong></p>
         </Card>
       </div>
+      <p className="mb-8 text-xs text-graphite/50">Las cuotitas van aparte: no suman al saldo de las juntadas.</p>
 
       {toPay.length > 0 && (
         <section className="mb-8 rounded-[var(--radius-card)] bg-rose/15 p-4 ring-1 ring-rose/30">

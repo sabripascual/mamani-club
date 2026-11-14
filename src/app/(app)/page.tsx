@@ -113,7 +113,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <span className="min-w-0 flex-1">
             <span className="block font-display text-lg font-semibold">Cuotitas del mes</span>
             <span className="block text-sm text-graphite/70">
-              {[cuotitas.iOwe ? `Pagás ${formatMoney(cuotitas.iOwe)}` : null, cuotitas.owedToMe ? `te pagan ${formatMoney(cuotitas.owedToMe)}` : null].filter(Boolean).join(" · ")}
+              {[cuotitas.iOwe ? `Este mes pagás ${formatMoney(cuotitas.iOwe)}` : null, cuotitas.owedToMe ? `te vuelven ${formatMoney(cuotitas.owedToMe)}` : null].filter(Boolean).join(" · ")}
             </span>
           </span>
           <ChevronRight className="size-5 text-graphite/40" />

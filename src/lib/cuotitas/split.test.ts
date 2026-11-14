@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { previewCuotita, splitInstallments } from "./split";
-import { addMonths, monthLabel } from "./types";
+import { addMonths, monthLabel, monthShort } from "./types";
 
 describe("splitInstallments", () => {
   it("parejo y exacto al centavo", () => {
@@ -28,4 +28,5 @@ describe("previewCuotita", () => {
 describe("meses", () => {
   it("suma meses cruzando el año", () => expect(addMonths("2026-12-01", 2)).toBe("2027-02-01"));
   it("nombre del mes", () => expect(monthLabel("2027-01-01")).toBe("Enero 2027"));
+  it("nombre corto", () => expect(monthShort("2026-12-01")).toBe("Dic 2026"));
 });
