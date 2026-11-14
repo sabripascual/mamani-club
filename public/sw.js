@@ -8,7 +8,7 @@
  *   notificación (gasto, juntada, evento…), aunque la app ya esté abierta.
  * Cambiar VERSION fuerza a que las instalaciones viejas limpien su caché.
  */
-const VERSION = "v5";
+const VERSION = "v6";
 const STATIC_CACHE = `mamani-static-${VERSION}`;
 // La pantalla sin conexión, con sus fuentes y el logo (tienen que estar antes de perder la red).
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/fonts/fredoka-latin.woff2", "/fonts/nunito-latin.woff2", "/brand/wordmark-sm.png"];

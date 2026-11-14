@@ -21,10 +21,10 @@ export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, o
       role="status"
       aria-live="polite"
       onClick={onDone}
-      className="mc-anim fixed inset-0 z-[70] flex cursor-pointer items-center justify-center bg-cream/70 backdrop-blur-sm"
+      className="mc-anim fixed inset-0 z-[70] flex cursor-pointer items-center justify-center bg-cream/70 px-[max(1.5rem,env(safe-area-inset-left))] backdrop-blur-sm"
       style={{ animation: "mc-fade 5s ease-out forwards" }}
     >
-      <div className="relative flex flex-col items-center" style={{ animation: "mc-pop 0.5s cubic-bezier(.2,1.4,.4,1) both" }}>
+      <div className="relative flex w-full max-w-sm flex-col items-center text-center" style={{ animation: "mc-pop 0.5s cubic-bezier(.2,1.4,.4,1) both" }}>
         {PIECES.map((p, i) => (
           <span
             key={i}
@@ -37,8 +37,8 @@ export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, o
             <path d="M5 12.5l4.5 4.5L19 7.5" strokeDasharray="48" style={{ animation: "mc-draw 0.45s 0.25s ease-out both" }} />
           </svg>
         </span>
-        <p className="mt-5 max-w-xs text-center font-display text-3xl font-semibold text-graphite">{message}</p>
-        {subtitle && <p className="mt-1 text-center text-base text-graphite/70">{subtitle}</p>}
+        <p className="mt-5 w-full font-display text-3xl leading-tight font-semibold text-balance break-words text-graphite">{message}</p>
+        {subtitle && <p className="mt-2 w-full text-base text-pretty break-words text-graphite/70">{subtitle}</p>}
       </div>
     </div>
   );
