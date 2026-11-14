@@ -62,7 +62,7 @@ export function EventForm({ action, types, today, initial, defaultDate }: {
             </label>
             <input type="hidden" name="date" value={start.date} />
             <input type="hidden" name="end_date" value={end.date} />
-            <DateRangePicker start={start.date} end={end.date} min={initial ? undefined : today} onChange={changeDays} />
+            <DateRangePicker start={start.date} end={end.date} initialMonth={initial ? start.date : today} onChange={changeDays} />
             <p className="text-center text-sm font-semibold">
               {sameDay ? dayLabel(start.date) : <>{dayLabel(start.date)} <span className="text-graphite/40">→</span> {dayLabel(end.date)}</>}
               {!sameDay && <span className="block text-xs font-normal text-graphite/55">Dura varios días: aparece en cada día del calendario.</span>}

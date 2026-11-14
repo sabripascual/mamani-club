@@ -6,6 +6,7 @@ import { requireActiveMember } from "@/lib/auth/session";
 import { getCalendarRange } from "@/lib/calendar/queries";
 import { ensureHolidays } from "@/lib/calendar/holidays";
 import { eventDays, eventTimeLabel, RSVP_LABEL } from "@/lib/calendar/types";
+import { buildAgenda } from "@/lib/calendar/agenda";
 import { getJuntadaTypes } from "@/lib/expenses/queries";
 import { todayAR, formatMonth, formatDayLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -34,18 +35,21 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   await ensureHolidays(y);
   const [{ events, rsvps, myRsvp, birthdays, holidays }, { byId: typeById }] = await Promise.all([getCalendarRange(from, to, profile.id), getJuntadaTypes(true)]);
 
+  const selected = sp.dia && sp.dia.startsWith(month) ? sp.dia : null;
+  // Grilla: un evento de varios días marca cada día que dura (puntos).
   const byDay = new Map<string, { events: typeof events; birthdays: typeof birthdays; holidays: typeof holidays }>();
   const slot = (d: string) => { if (!byDay.has(d)) byDay.set(d, { events: [], birthdays: [], holidays: [] }); return byDay.get(d)!; };
-  // Un evento de varios días aparece en cada día que dura (dentro del mes).
   for (const e of events) for (const d of eventDays(e)) if (d >= from && d <= to) slot(d).events.push(e);
   for (const b of birthdays) slot(b.day).birthdays.push(b);
   for (const h of holidays) slot(h.day).holidays.push(h);
 
+  // Lista: cada evento UNA vez (ver buildAgenda).
+  const agenda = buildAgenda({ events, birthdays, holidays, from, to, selected, listFrom: month === today.slice(0, 7) ? today : from });
+
   // Grilla que arranca en lunes.
   const firstWeekday = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
   const cells: (string | null)[] = [...Array(firstWeekday).fill(null), ...Array.from({ length: lastDay }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`)];
-  const selected = sp.dia && sp.dia.startsWith(month) ? sp.dia : null;
-  const agendaDays = [...byDay.keys()].sort().filter((d) => (selected ? d === selected : d >= (month === today.slice(0, 7) ? today : from)));
+  const agendaDays = [...agenda.keys()].sort();
   const going = (id: string) => rsvps.filter((r) => r.event_id === id && r.response === "going").length;
 
   return (
@@ -94,7 +98,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       ) : (
         <div className="flex flex-col gap-5">
           {agendaDays.map((d) => {
-            const info = byDay.get(d)!;
+            const info = agenda.get(d)!;
             return (
               <section key={d}>
                 {!selected && <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-graphite/50 first-letter:uppercase">{formatDayLong(d)}</p>}
