@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Las pantallas ya visitadas se reusan 30 s al volver (atrás, cambiar de pestaña):
+    // la navegación es instantánea. Cargar o editar algo las refresca igual (revalidatePath).
+    staleTimes: { dynamic: 30, static: 180 },
+  },
   async headers() {
     return [
       {

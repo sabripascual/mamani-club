@@ -8,9 +8,8 @@ import { requireActiveMember } from "@/lib/auth/session";
 import { getMemberBalances, getMembers, listJuntadas } from "@/lib/expenses/queries";
 import { RecentExpenses } from "@/components/expenses/recent-expenses";
 import { myCuotitasMonth } from "@/lib/cuotitas/queries";
-import { createClient } from "@/lib/supabase/server";
 import { birthdaysToday } from "@/lib/calendar/queries";
-import { CalendarDays, CreditCard, Images, Trophy } from "lucide-react";
+import { CreditCard, Images, Trophy } from "lucide-react";
 import { loadDataset, parseYearMonth, type PeriodParams } from "@/lib/stats/load";
 import { formatMoney } from "@/lib/money/format";
 import { todayAR } from "@/lib/dates";
@@ -31,22 +30,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const { profile } = await requireActiveMember();
   const today = todayAR();
-  const [dataset, balances, { byId }, albums, recent] = await Promise.all([
+  // Todo en una sola tanda de consultas en paralelo.
+  const [dataset, balances, { byId }, albums, recent, pendingRequests, myAvatar, cumples, cuotitas] = await Promise.all([
     loadDataset(), getMemberBalances(profile.id), getMembers(), getAlbums({ limit: 12 }), listJuntadas({}, 3),
-  ]);
-  const mine = balances.find((b) => b.currency === "ARS");
-  // ¿Fui a las últimas juntadas? (para pintarlas distinto en la lista)
-  const supabase = await createClient();
-  const { data: myAtt } = recent.length
-    ? await supabase.from("juntada_attendees").select("juntada_id").eq("member_id", profile.id).in("juntada_id", recent.map((j) => j.id))
-    : { data: [] };
-  const attended = new Set((myAtt ?? []).map((a) => a.juntada_id as string));
-  const [pendingRequests, myAvatar, cumples, cuotitas] = await Promise.all([
     profile.role === "admin" ? pendingRequestsCount() : Promise.resolve(0),
     signAvatarUrls([profile.avatar_path]).then((m) => (profile.avatar_path ? (m.get(profile.avatar_path) ?? null) : null)),
     birthdaysToday(today),
     myCuotitasMonth(profile.id, `${today.slice(0, 7)}-01`),
   ]);
+  const mine = balances.find((b) => b.currency === "ARS");
+  // ¿Fui a las últimas juntadas? Sale de los datos de las estadísticas (sin otra consulta).
+  const attended = new Set(dataset.attendees.filter((a) => a.member_id === profile.id).map((a) => a.juntada_id));
   const { year, month, filters } = parseYearMonth(sp, today);
 
   return (
@@ -73,7 +67,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
       <PendingRequestsBanner count={pendingRequests} />
       <nav aria-label="Accesos rápidos" className="-mx-5 mb-6 flex gap-2 overflow-x-auto px-5 pb-1 lg:hidden [scrollbar-width:none]">
-        {[["/calendario", "Calendario", CalendarDays], ["/cuotitas", "Cuotitas", CreditCard], ["/rankings", "Rankings", Trophy], ["/recuerdos", "Memories", Images]].map(([href, label, Icon]) => {
+        {[["/cuotitas", "Cuotitas", CreditCard], ["/rankings", "Rankings", Trophy], ["/recuerdos", "Memories", Images]].map(([href, label, Icon]) => {
           const I = Icon as typeof Trophy;
           return (
             <Link key={href as string} href={href as string} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-white/70 px-4 text-sm font-semibold ring-1 ring-graphite/10">

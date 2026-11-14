@@ -25,7 +25,8 @@
 | 0014_roedor.sql | Cantidad de avisos de deuda enviados por integrante (ranking "El roedor") | ✅ |
 | 0015_eventos_desde_hasta_y_cron.sql | Eventos desde/hasta (varios días) y registro de corridas del cron | ✅ |
 | 0016_cuotitas.sql | Las Cuotitas: compras con tarjeta en cuotas y préstamos, tarjetas (solo marca) | ✅ |
-| 0017_arreglo_cuotitas_safeupdate.sql | Arreglo: cargar cuotitas desde la app ("DELETE requires a WHERE clause") | ⏳ |
+| 0017_arreglo_cuotitas_safeupdate.sql | Arreglo: cargar cuotitas desde la app ("DELETE requires a WHERE clause") | ✅ |
+| 0018_performance_saldos.sql | Performance: saldos solo de juntadas abiertas, índices | ⏳ |
 
 ## Correr las pruebas localmente
 
