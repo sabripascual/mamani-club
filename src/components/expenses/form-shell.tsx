@@ -24,6 +24,11 @@ export function FormShell({
         const data = new FormData(e.currentTarget);
         startTransition(() => formAction(data));
       }}
+      // El Enter/"Ir" del teclado no envía el formulario: solo el botón de guardar.
+      onKeyDown={(e) => {
+        const t = e.target as HTMLElement;
+        if (e.key === "Enter" && t.tagName === "INPUT" && (t as HTMLInputElement).type !== "submit") e.preventDefault();
+      }}
       className="flex flex-col gap-7"
       noValidate
     >
