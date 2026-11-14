@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Camera } from "lucide-react";
 import { signUp, type FormState } from "@/lib/auth/actions";
-import { uploadMyAvatar } from "@/lib/images/avatar-upload";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/images/resize";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -28,6 +27,7 @@ export function SignUpForm() {
     (async () => {
       if (avatar) {
         try {
+          const { uploadMyAvatar } = await import("@/lib/images/avatar-upload");
           await uploadMyAvatar(avatar);
         } catch {
           // La cuenta ya existe: el avatar se puede cargar después desde el perfil.

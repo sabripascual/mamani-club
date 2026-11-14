@@ -97,22 +97,24 @@ export async function getJuntada(id: string) {
   const supabase = await createClient();
   const { data: juntada } = await supabase.from("juntadas").select(JUNTADA_COLUMNS).eq("id", id).maybeSingle<Juntada>();
   if (!juntada) return null;
-  const [{ data: gastos }, { data: attendees }, { data: nets }, { data: transfers }, { data: settlements }, { data: status }] = await Promise.all([
+  const [{ data: gastos }, { data: attendees }, { data: nets }, { data: transfers }, { data: settlements }, { data: status }, { data: shares }] = await Promise.all([
     supabase.from("expenses").select(GASTO_COLUMNS).eq("juntada_id", id).eq("status", "active").order("created_at").returns<Gasto[]>(),
     supabase.from("juntada_attendees").select("member_id, created_at").eq("juntada_id", id).order("created_at"),
     supabase.from("v_juntada_member_balances").select("*").eq("juntada_id", id).returns<MemberNet[]>(),
     supabase.rpc("juntada_transfers", { p_juntada: id }).returns<Omit<Transfer, "juntada_id" | "currency">[]>(),
     supabase.from("settlements").select("*").eq("juntada_id", id).order("created_at", { ascending: false }).returns<Settlement[]>(),
     supabase.from("v_juntada_status").select("*").eq("juntada_id", id).maybeSingle<JuntadaStatusRow>(),
+    // Partes de los gastos activos de la juntada, en la misma tanda (sin esperar a los gastos).
+    supabase.from("expense_shares").select("id, expense_id, member_id, amount_cents, is_participant, guest_name, guest_paid_at, expenses!inner(juntada_id, status)")
+      .eq("expenses.juntada_id", id).eq("expenses.status", "active").returns<(Share & { expenses: unknown })[]>(),
   ]);
-  const gastoIds = (gastos ?? []).map((g) => g.id);
-  const { data: shares } = gastoIds.length
-    ? await supabase.from("expense_shares").select("id, expense_id, member_id, amount_cents, is_participant, guest_name, guest_paid_at").in("expense_id", gastoIds).returns<Share[]>()
-    : { data: [] as Share[] };
   return {
     juntada,
     gastos: (gastos ?? []).map((g) => ({ ...g, amount_cents: num(g.amount_cents), base_amount_cents: num(g.base_amount_cents) })),
-    shares: (shares ?? []).map((s) => ({ ...s, amount_cents: num(s.amount_cents) })),
+    shares: (shares ?? []).map((s) => ({
+      id: s.id, expense_id: s.expense_id, member_id: s.member_id, amount_cents: num(s.amount_cents),
+      is_participant: s.is_participant, guest_name: s.guest_name, guest_paid_at: s.guest_paid_at,
+    })),
     attendees: (attendees ?? []).map((a) => a.member_id as string),
     nets: (nets ?? []).map((n) => ({ ...n, paid_cents: num(n.paid_cents), consumed_cents: num(n.consumed_cents), sent_cents: num(n.sent_cents),
       received_cents: num(n.received_cents), net_cents: num(n.net_cents) })),

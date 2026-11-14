@@ -357,6 +357,14 @@ tests/e2e/             Playwright
   - Recordatorios en el cron de las 10:00: deudoras del 1 al 5 y después cada 3 días mientras
     deban (también atrasadas); quien cobra, el 1 y desde el 5 cada 3 días. Cuentan para
     "El roedor" (`debt_reminders_sent` incluye `cuotita`).
+- **ADR-039** Performance:
+  - Base (0018): `v_pending_transfers` calcula transferencias solo en juntadas con saldos
+    abiertos y `v_member_balances` las calcula una vez (300 juntadas de prueba: 57 → 20 ms,
+    mismos resultados). Índices para las búsquedas frecuentes.
+  - Navegación: `staleTimes.dynamic = 30` (volver a una pantalla vista es instantáneo; las
+    acciones que cambian datos la refrescan con `revalidatePath`).
+  - Inicio en una sola tanda de consultas; partes de la juntada en la misma tanda.
+  - El cliente de Supabase del navegador (~70 kB) se descarga solo al subir fotos.
 
 ## 10. Riesgos y limitaciones conocidas
 

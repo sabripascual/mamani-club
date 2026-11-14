@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
-import { uploadPhotos } from "@/lib/photos/upload";
 import { photosUploaded, refreshAlbum } from "@/lib/photos/actions";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +19,8 @@ export function PhotoUploader({ expenseId, variant = "primary" }: { expenseId: s
     setMessage(null);
     setProgress({ done: 0, total: files.length });
     try {
+      // El cliente de Supabase (~70 kB) se descarga recién al subir.
+      const { uploadPhotos } = await import("@/lib/photos/upload");
       const res = await uploadPhotos(expenseId, files, (done, total) => setProgress({ done, total }));
       await refreshAlbum(expenseId);
       if (res.ok > 0) photosUploaded(expenseId).catch(() => {});

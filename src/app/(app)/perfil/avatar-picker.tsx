@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { uploadMyAvatar } from "@/lib/images/avatar-upload";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/images/resize";
 
 export function AvatarPicker({ src, initials }: { src: string | null; initials: string }) {
@@ -19,6 +18,7 @@ export function AvatarPicker({ src, initials }: { src: string | null; initials: 
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) return setError("Usá JPG, PNG o WebP");
     setBusy(true);
     try {
+      const { uploadMyAvatar } = await import("@/lib/images/avatar-upload");
       await uploadMyAvatar(file);
       router.refresh();
     } catch {
