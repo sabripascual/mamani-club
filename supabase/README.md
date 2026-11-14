@@ -23,7 +23,8 @@
 | 0012_quien_pago_y_frases.sql | Quien pagó puede editar y quitar su gasto; frases de evento nuevo sin repetir | ✅ |
 | 0013_eventos_horario.sql | Eventos de todo el día y con hora de fin | ✅ |
 | 0014_roedor.sql | Cantidad de avisos de deuda enviados por integrante (ranking "El roedor") | ✅ |
-| 0015_eventos_desde_hasta_y_cron.sql | Eventos desde/hasta (varios días) y registro de corridas del cron | ⏳ |
+| 0015_eventos_desde_hasta_y_cron.sql | Eventos desde/hasta (varios días) y registro de corridas del cron | ✅ |
+| 0016_cuotitas.sql | Las Cuotitas: compras con tarjeta en cuotas y préstamos, tarjetas (solo marca) | ⏳ |
 
 ## Correr las pruebas localmente
 

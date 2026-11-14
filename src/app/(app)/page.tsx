@@ -7,9 +7,10 @@ import { pendingRequestsCount } from "@/lib/admin/pending";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getMemberBalances, getMembers, listJuntadas } from "@/lib/expenses/queries";
 import { RecentExpenses } from "@/components/expenses/recent-expenses";
+import { myCuotitasMonth } from "@/lib/cuotitas/queries";
 import { createClient } from "@/lib/supabase/server";
 import { birthdaysToday } from "@/lib/calendar/queries";
-import { CalendarDays, Images, Trophy } from "lucide-react";
+import { CalendarDays, CreditCard, Images, Trophy } from "lucide-react";
 import { loadDataset, parseYearMonth, type PeriodParams } from "@/lib/stats/load";
 import { formatMoney } from "@/lib/money/format";
 import { todayAR } from "@/lib/dates";
@@ -40,10 +41,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     ? await supabase.from("juntada_attendees").select("juntada_id").eq("member_id", profile.id).in("juntada_id", recent.map((j) => j.id))
     : { data: [] };
   const attended = new Set((myAtt ?? []).map((a) => a.juntada_id as string));
-  const [pendingRequests, myAvatar, cumples] = await Promise.all([
+  const [pendingRequests, myAvatar, cumples, cuotitas] = await Promise.all([
     profile.role === "admin" ? pendingRequestsCount() : Promise.resolve(0),
     signAvatarUrls([profile.avatar_path]).then((m) => (profile.avatar_path ? (m.get(profile.avatar_path) ?? null) : null)),
     birthdaysToday(today),
+    myCuotitasMonth(profile.id, `${today.slice(0, 7)}-01`),
   ]);
   const { year, month, filters } = parseYearMonth(sp, today);
 
@@ -71,7 +73,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       )}
       <PendingRequestsBanner count={pendingRequests} />
       <nav aria-label="Accesos rápidos" className="-mx-5 mb-6 flex gap-2 overflow-x-auto px-5 pb-1 lg:hidden [scrollbar-width:none]">
-        {[["/calendario", "Calendario", CalendarDays], ["/rankings", "Rankings", Trophy], ["/recuerdos", "Memories", Images]].map(([href, label, Icon]) => {
+        {[["/calendario", "Calendario", CalendarDays], ["/cuotitas", "Cuotitas", CreditCard], ["/rankings", "Rankings", Trophy], ["/recuerdos", "Memories", Images]].map(([href, label, Icon]) => {
           const I = Icon as typeof Trophy;
           return (
             <Link key={href as string} href={href as string} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-white/70 px-4 text-sm font-semibold ring-1 ring-graphite/10">
@@ -104,6 +106,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Card>
         </Link>
       </div>
+
+      {cuotitas.count > 0 && (
+        <Link href="/cuotitas" className="mb-8 flex items-center gap-3 rounded-[var(--radius-card)] bg-lime/60 p-4 ring-1 ring-lime transition hover:bg-lime/80">
+          <span className="text-2xl" aria-hidden>💳</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-lg font-semibold">Cuotitas del mes</span>
+            <span className="block text-sm text-graphite/70">
+              {[cuotitas.iOwe ? `Pagás ${formatMoney(cuotitas.iOwe)}` : null, cuotitas.owedToMe ? `te pagan ${formatMoney(cuotitas.owedToMe)}` : null].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          <ChevronRight className="size-5 text-graphite/40" />
+        </Link>
+      )}
 
       <div className="mb-8"><RecentExpenses items={recent.map((j) => ({ id: j.id, title: j.title, occurred_on: j.occurred_on, settlement_status: j.summary?.settlement_status ?? "empty", attended: attended.has(j.id) }))} /></div>
 

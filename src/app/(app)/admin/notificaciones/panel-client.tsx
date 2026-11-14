@@ -101,7 +101,7 @@ export function RunRemindersButton() {
         return x.planned ? `Listo: ${x.sent ?? 0} de ${x.planned} avisos llegaron a algún dispositivo.` : "No había recordatorios pendientes para hoy.";
       })}
         className="inline-flex h-11 items-center gap-2 rounded-full bg-graphite px-5 text-sm font-semibold text-cream disabled:opacity-50">
-        {pending ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} Mandar recordatorios de deuda ahora
+        {pending ? <Loader2 className="size-4 animate-spin" /> : <BellRing className="size-4" />} Mandar recordatorios de deuda y cuotitas ahora
       </button>
       {msg && <p className={cn("mt-2 text-sm", msg.tone === "error" ? "text-rose-dark" : "text-graphite/70")}>{msg.text}</p>}
     </div>
