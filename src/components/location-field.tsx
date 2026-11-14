@@ -5,26 +5,19 @@ import { Check, Loader2, MapPin } from "lucide-react";
 import { Field } from "@/components/ui/field";
 import { mapsUrl } from "@/components/maps-link";
 
-type Place = { label: string; detail: string; lat: number; lon: number };
-
-/** Arma "Nombre, calle 123" + "Barrio, Ciudad" a partir de un resultado de Photon (OpenStreetMap). */
-function toPlace(f: { geometry: { coordinates: [number, number] }; properties: Record<string, string | undefined> }): Place {
-  const p = f.properties;
-  const street = [p.street, p.housenumber].filter(Boolean).join(" ");
-  const main = [p.name, street].filter((x, i, a) => x && a.indexOf(x) === i).join(", ") || p.city || "";
-  const detail = [p.district ?? p.locality, p.city, p.state].filter((x, i, a) => x && a.indexOf(x) === i && x !== main).join(", ");
-  return { label: [main, detail].filter(Boolean).join(", "), detail, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] };
-}
+type Place = { main: string; detail: string; label: string; lat: number; lon: number };
 
 /**
- * "¿Dónde?" con sugerencias mientras escribís (Photon / OpenStreetMap, gratis y sin clave,
- * con prioridad cerca de Buenos Aires). Al elegir una dirección se muestra en el mapa y
+ * "¿Dónde?" con sugerencias mientras escribís (las busca nuestro servidor en Photon /
+ * OpenStreetMap, gratis y sin clave, con prioridad cerca de Buenos Aires). Al elegir una dirección se muestra en el mapa y
  * se confirma. Lo que queda en el campo es lo que se guarda con el formulario.
  */
 export function LocationField({ name, defaultValue, placeholder, error }: { name: string; defaultValue?: string | null; placeholder?: string; error?: string }) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searched, setSearched] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [selected, setSelected] = useState<Place | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
@@ -39,9 +32,11 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lat=-34.6&lon=-58.44`, { signal: ctrl.signal });
-        const json = await res.json();
-        setResults(((json.features ?? []) as Parameters<typeof toPlace>[0][]).map(toPlace).filter((p) => p.label));
+        const res = await fetch(`/api/lugares?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        const json = (await res.json()) as { places?: Place[]; error?: string };
+        setResults(json.places ?? []);
+        setSearchError(json.error ?? null);
+        setSearched(q);
         setListOpen(true);
       } catch {
         // Sin conexión o búsqueda cancelada: se puede seguir escribiendo a mano.
@@ -69,7 +64,7 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
         <Field label="¿Dónde?" name={name} placeholder={placeholder} value={value} autoComplete="off" error={error} maxLength={200}
           onChange={(e) => { typed.current = true; setValue(e.target.value); setConfirmed(null); setSelected(null); }}
           onFocus={() => results.length && setListOpen(true)}
-          onBlur={() => setTimeout(() => setListOpen(false), 150)}
+          onBlur={() => setTimeout(() => setListOpen(false), 300)}
           hint="Escribí la dirección o el lugar y elegí una opción." />
         {searching && <Loader2 className="absolute top-[2.65rem] right-4 size-4 animate-spin text-graphite/40" />}
         {listOpen && results.length > 0 && (
@@ -77,12 +72,12 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
             className="absolute inset-x-0 top-[5.4rem] z-30 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-graphite/10">
             {results.map((p) => (
               <li key={`${p.lat},${p.lon},${p.label}`}>
-                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => choose(p)}
+                <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={() => choose(p)}
                   className="flex w-full items-start gap-2.5 px-4 py-3 text-left text-sm hover:bg-cream">
                   <MapPin className="mt-0.5 size-4 shrink-0 text-rose-dark" />
                   <span className="min-w-0">
-                    <span className="block truncate font-semibold">{p.label.split(", ")[0]}</span>
-                    <span className="block truncate text-xs text-graphite/55">{p.label.split(", ").slice(1).join(", ")}</span>
+                    <span className="block truncate font-semibold">{p.main}</span>
+                    <span className="block truncate text-xs text-graphite/55">{p.detail}</span>
                   </span>
                 </button>
               </li>
@@ -90,6 +85,9 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
           </ul>
         )}
       </div>
+      {!searching && typed.current && searched === q && q.length >= 3 && results.length === 0 && (
+        <p className="text-xs text-graphite/60">{searchError ? `${searchError}. Podés escribirla igual y verla en el mapa.` : "No encontramos esa dirección: probá con calle y altura, o el nombre del lugar."}</p>
+      )}
       {q && !mapOpen && confirmed !== q && (
         <button type="button" onClick={() => setMapOpen(true)}
           className="inline-flex h-10 items-center gap-1.5 self-start rounded-full bg-white/70 px-4 text-sm font-semibold text-rose-dark ring-1 ring-rose/30 hover:bg-white">
