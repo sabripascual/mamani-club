@@ -64,11 +64,11 @@ export function parsePeriod(sp: PeriodParams, today: string): { filters: Filters
   return parseRange(sp, today);
 }
 
-/** Inicio: año y mes, con el año y el mes actuales por defecto ("mes=0" = todo el año). */
+/** Inicio: año (el actual por defecto) y mes (por defecto, todo el año = 0). */
 export function parseYearMonth(sp: PeriodParams, today: string) {
   const year = /^\d{4}$/.test(sp.anio ?? "") ? Number(sp.anio) : Number(today.slice(0, 4));
-  const m = sp.mes === undefined || sp.mes === "" ? Number(today.slice(5, 7)) : Number(sp.mes);
-  const month = m >= 0 && m <= 12 ? m : Number(today.slice(5, 7));
+  const m = sp.mes === undefined || sp.mes === "" ? 0 : Number(sp.mes);
+  const month = Number.isInteger(m) && m >= 0 && m <= 12 ? m : 0;
   const { filters } = parseRange({ anio: String(year), mes: month ? String(month) : "" }, today);
   return { year, month, filters };
 }

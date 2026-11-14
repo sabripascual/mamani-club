@@ -272,7 +272,7 @@ returns table (member_id uuid, sent_on date)
 language sql stable security definer set search_path = '' as $$
   select l.member_id, l.sent_on
   from public.notification_log l
-  where l.kind in ('debtor', 'cuotita') and l.devices > 0 and public.is_active_member();
+  where l.kind::text in ('debtor', 'cuotita') and l.devices > 0 and public.is_active_member();
 $$;
 
 -- -----------------------------------------------------------------------------
