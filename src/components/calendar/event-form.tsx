@@ -8,6 +8,7 @@ import { Field } from "@/components/ui/field";
 import { LocationField } from "@/components/location-field";
 import { FormShell } from "@/components/expenses/form-shell";
 import { CategoryIcon } from "@/components/expenses/category-icon";
+import { DateRangePicker, dayLabel } from "./date-range-picker";
 
 export type EventInitial = {
   title: string; date: string; time: string; end_date: string; end_time: string; all_day: boolean; type_id: string; location: string | null; description: string | null;
@@ -36,6 +37,14 @@ export function EventForm({ action, types, today, initial, defaultDate }: {
     if (!endTouched || endBefore) setEnd({ date: next.date, time: plusHour(next.time) });
   };
   const changeEnd = (next: { date: string; time: string }) => { setEndTouched(true); setEnd(next); };
+  // Del calendario: nuevo rango de días (las horas se mantienen; si queda el fin antes, se corrige).
+  const changeDays = (from: string, to: string) => {
+    const s = { ...start, date: from };
+    const e = { ...end, date: to };
+    setStart(s);
+    setEndTouched(true);
+    setEnd(`${e.date}T${e.time}` < `${s.date}T${s.time}` ? { date: to, time: plusHour(s.time) } : e);
+  };
   const sameDay = end.date === start.date;
   return (
     <FormShell action={action} submitLabel={initial ? "Guardar cambios" : "Crear evento"}>
@@ -51,28 +60,30 @@ export function EventForm({ action, types, today, initial, defaultDate }: {
                 <span className={cn("absolute top-1 size-5 rounded-full bg-white shadow transition-all", allDay ? "left-6" : "left-1")} />
               </span>
             </label>
-            <div className="rounded-2xl bg-white/50 p-3 ring-1 ring-graphite/5">
-              <div className="grid grid-cols-[3rem_1fr_auto] items-center gap-2">
-                <span className="text-sm font-semibold text-graphite/70">Desde</span>
-                <input type="date" name="date" aria-label="Fecha de inicio" required min={initial ? undefined : today} value={start.date}
-                  onChange={(e) => e.target.value && changeStart({ ...start, date: e.target.value })} className={inputCls} />
-                {!allDay && <input type="time" name="time" aria-label="Hora de inicio" required value={start.time}
-                  onChange={(e) => e.target.value && changeStart({ ...start, time: e.target.value })} className={cn(inputCls, "w-[8.25rem] px-2")} />}
+            <input type="hidden" name="date" value={start.date} />
+            <input type="hidden" name="end_date" value={end.date} />
+            <DateRangePicker start={start.date} end={end.date} min={initial ? undefined : today} onChange={changeDays} />
+            <p className="text-center text-sm font-semibold">
+              {sameDay ? dayLabel(start.date) : <>{dayLabel(start.date)} <span className="text-graphite/40">→</span> {dayLabel(end.date)}</>}
+              {!sameDay && <span className="block text-xs font-normal text-graphite/55">Dura varios días: aparece en cada día del calendario.</span>}
+            </p>
+            {!allDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1.5 text-sm font-semibold text-graphite/80">
+                  Empieza{!sameDay && <span className="-mt-1 text-xs font-normal text-graphite/55">{dayLabel(start.date)}</span>}
+                  <input type="time" name="time" required value={start.time}
+                    onChange={(e) => e.target.value && changeStart({ ...start, time: e.target.value })} className={inputCls} />
+                </label>
+                <label className="flex flex-col gap-1.5 text-sm font-semibold text-graphite/80">
+                  Termina{!sameDay && <span className="-mt-1 text-xs font-normal text-graphite/55">{dayLabel(end.date)}</span>}
+                  <input type="time" name="end_time" required min={sameDay ? start.time : undefined} value={end.time}
+                    onChange={(e) => e.target.value && changeEnd({ ...end, time: e.target.value })} className={inputCls} />
+                </label>
               </div>
-              <div className="mt-2 grid grid-cols-[3rem_1fr_auto] items-center gap-2">
-                <span className="text-sm font-semibold text-graphite/70">Hasta</span>
-                <input type="date" name="end_date" aria-label="Fecha de fin" required min={start.date} value={end.date}
-                  onChange={(e) => e.target.value && changeEnd({ ...end, date: e.target.value })} className={inputCls} />
-                {!allDay && <input type="time" name="end_time" aria-label="Hora de fin" required min={sameDay ? start.time : undefined} value={end.time}
-                  onChange={(e) => e.target.value && changeEnd({ ...end, time: e.target.value })} className={cn(inputCls, "w-[8.25rem] px-2")} />}
-              </div>
-              {(errors.date || errors.time || errors.end_date || errors.end_time) && (
-                <p className="mt-2 text-sm text-rose-dark">{errors.end_date ?? errors.end_time ?? errors.date ?? errors.time}</p>
-              )}
-              <p className="mt-2 text-xs text-graphite/55">
-                {sameDay ? "Termina el mismo día. Cambiá la fecha de “Hasta” si dura más (por ejemplo, un viaje)." : "Dura varios días: aparece en cada día del calendario."}
-              </p>
-            </div>
+            )}
+            {(errors.date || errors.time || errors.end_date || errors.end_time) && (
+              <p className="text-sm text-rose-dark">{errors.end_date ?? errors.end_time ?? errors.date ?? errors.time}</p>
+            )}
           </fieldset>
           <fieldset>
             <legend className="mb-2 text-sm font-semibold text-graphite/80">Tipo</legend>

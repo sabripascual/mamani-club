@@ -46,10 +46,18 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
       {e.description && <p className="mb-6 whitespace-pre-line text-graphite/75">{e.description}</p>}
 
-      <Card className="mb-6">
-        <p className="mb-3 font-semibold">¿Vas?</p>
-        <RsvpButtons eventId={e.id} current={mine} title={e.title} />
-      </Card>
+      {e.created_by === me ? (
+        // Quien lo crea va: no le preguntamos. Les preguntamos a las demás.
+        <Card className="mb-6 flex items-center gap-3 bg-lime/50">
+          <span className="text-2xl" aria-hidden>💃</span>
+          <p className="text-sm"><strong>Vas: lo organizás vos.</strong><span className="block text-graphite/65">Les preguntamos a las demás si van.</span></p>
+        </Card>
+      ) : (
+        <Card className="mb-6">
+          <p className="mb-3 font-semibold">¿Vas?</p>
+          <RsvpButtons eventId={e.id} current={mine} title={e.title} />
+        </Card>
+      )}
 
       {e.juntada_id ? (
         <Link href={`/gastos/${e.juntada_id}`} className="mb-8 flex items-center gap-3 rounded-[var(--radius-card)] bg-lime p-4 font-semibold transition hover:brightness-95">
@@ -58,7 +66,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       ) : canManage ? (
         <div className="mb-8"><ConvertButton eventId={e.id} /></div>
       ) : (
-        <p className="mb-8 rounded-2xl bg-white/50 p-4 text-sm text-graphite/60">Cuando llegue el día, {memberName(memberById.get(e.created_by))} lo convierte en juntada para cargar los gastos.</p>
+        <p className="mb-8 rounded-2xl bg-white/50 p-4 text-sm text-graphite/60">{memberName(memberById.get(e.created_by))} lo convierte en juntada para cargar los gastos.</p>
       )}
 
       {groups.map(({ r, list }) => list.length > 0 && (

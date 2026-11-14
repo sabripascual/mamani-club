@@ -365,6 +365,13 @@ tests/e2e/             Playwright
     acciones que cambian datos la refrescan con `revalidatePath`).
   - Inicio en una sola tanda de consultas; partes de la juntada en la misma tanda.
   - El cliente de Supabase del navegador (~70 kB) se descarga solo al subir fotos.
+- **ADR-040** Eventos:
+  - Un solo calendario para elegir el rango de días (`DateRangePicker`) y abajo las horas.
+  - Quien crea el evento va (la base la anota en "Voy") y no se le pregunta.
+  - Sugerencias de dirección por `/api/lugares` (el servidor consulta Photon), con aviso si
+    no encuentra o falla. Reemplaza la consulta directa desde el teléfono (ADR-027).
+  - Filtros `or()` de PostgREST con valores que tienen ":" (horas) van entre comillas; si no,
+    la consulta falla. Los errores de la consulta del calendario ahora se muestran.
 
 ## 10. Riesgos y limitaciones conocidas
 

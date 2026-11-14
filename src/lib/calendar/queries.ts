@@ -8,15 +8,18 @@ const EVENT_COLS = "id, title, starts_at, ends_at, all_day, type_id, location, d
 /** Eventos, cumpleaños y feriados entre dos fechas (inclusive, en hora argentina). */
 export async function getCalendarRange(from: string, to: string, me: string) {
   const supabase = await createClient();
-  const [{ data: events }, { data: profiles }, { data: holidays }] = await Promise.all([
+  const [{ data: events, error: eventsError }, { data: profiles }, { data: holidays }] = await Promise.all([
     supabase.from("events").select(EVENT_COLS).eq("status", "active")
       // Los que se cruzan con el período: empiezan antes del fin y terminan (o empiezan) después del inicio.
       .lte("starts_at", `${to}T23:59:59-03:00`)
-      .or(`starts_at.gte.${from}T00:00:00-03:00,ends_at.gte.${from}T00:00:00-03:00`)
+      // Los valores con ":" van entre comillas dentro de or() (si no, Supabase rechaza la consulta).
+      .or(`starts_at.gte."${from}T00:00:00-03:00",ends_at.gte."${from}T00:00:00-03:00"`)
       .order("starts_at").returns<CalendarEvent[]>(),
     supabase.from("profiles").select("id, first_name, nickname, birth_date").eq("status", "active").not("birth_date", "is", null),
     supabase.from("holidays").select("day, name, kind").gte("day", from).lte("day", to).order("day").returns<Holiday[]>(),
   ]);
+  // Si falla, que se vea (un calendario vacío esconde el problema).
+  if (eventsError) throw new Error(`No se pudieron leer los eventos: ${eventsError.message}`);
   const ids = (events ?? []).map((e) => e.id);
   const { data: rsvps } = ids.length
     ? await supabase.from("event_rsvps").select("event_id, member_id, response").in("event_id", ids)
