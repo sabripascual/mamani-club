@@ -9,6 +9,7 @@ import { LocationField } from "@/components/location-field";
 import { FormShell } from "@/components/expenses/form-shell";
 import { CategoryIcon } from "@/components/expenses/category-icon";
 import { DateRangePicker, dayLabel } from "./date-range-picker";
+import { TimeField } from "@/components/ui/time-field";
 
 export type EventInitial = {
   title: string; date: string; time: string; end_date: string; end_time: string; all_day: boolean; type_id: string; location: string | null; description: string | null;
@@ -20,8 +21,6 @@ function plusHour(t: string) {
   return h >= 23 ? "23:59" : `${String(h + 1).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-// Hora: en iPhone el campo trae un ancho mínimo propio y se desborda; lo anulamos.
-const timeCls = "block h-11 w-full min-w-0 appearance-none rounded-2xl border border-graphite/10 bg-white/70 px-2 text-center text-base outline-none [&::-webkit-date-and-time-value]:text-center focus:border-rose focus:bg-white focus:ring-4 focus:ring-rose/15";
 
 export function EventForm({ action, types, today, initial, defaultDate }: {
   action: (s: FormState, fd: FormData) => Promise<FormState>; types: CategoryTree; today: string; initial?: EventInitial; defaultDate?: string;
@@ -70,16 +69,10 @@ export function EventForm({ action, types, today, initial, defaultDate }: {
             </p>
             {!allDay && (
               <div className="grid grid-cols-2 gap-3">
-                <label className="flex min-w-0 flex-col gap-1.5 text-sm font-semibold text-graphite/80">
-                  Empieza{!sameDay && <span className="-mt-1 text-xs font-normal text-graphite/55">{dayLabel(start.date)}</span>}
-                  <input type="time" name="time" required value={start.time}
-                    onChange={(e) => e.target.value && changeStart({ ...start, time: e.target.value })} className={timeCls} />
-                </label>
-                <label className="flex min-w-0 flex-col gap-1.5 text-sm font-semibold text-graphite/80">
-                  Termina{!sameDay && <span className="-mt-1 text-xs font-normal text-graphite/55">{dayLabel(end.date)}</span>}
-                  <input type="time" name="end_time" required min={sameDay ? start.time : undefined} value={end.time}
-                    onChange={(e) => e.target.value && changeEnd({ ...end, time: e.target.value })} className={timeCls} />
-                </label>
+                <TimeField name="time" label="Empieza" sub={sameDay ? undefined : dayLabel(start.date)} value={start.time}
+                  onChange={(v) => changeStart({ ...start, time: v })} />
+                <TimeField name="end_time" label="Termina" sub={sameDay ? undefined : dayLabel(end.date)} value={end.time}
+                  min={sameDay ? start.time : undefined} onChange={(v) => changeEnd({ ...end, time: v })} />
               </div>
             )}
             {(errors.date || errors.time || errors.end_date || errors.end_time) && (

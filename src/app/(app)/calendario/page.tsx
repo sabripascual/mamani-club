@@ -50,7 +50,50 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const firstWeekday = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
   const cells: (string | null)[] = [...Array(firstWeekday).fill(null), ...Array.from({ length: lastDay }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`)];
   const agendaDays = [...agenda.keys()].sort();
+  // Mes actual: también lo que ya pasó este mes (por ejemplo, un evento cargado con fecha
+  // anterior), aparte y del más reciente al más viejo.
+  const isCurrent = month === today.slice(0, 7);
+  const lastDayOf = (e: (typeof events)[number]) => eventDays(e).at(-1)!;
+  const past = isCurrent && !selected
+    ? buildAgenda({
+        events: events.filter((e) => lastDayOf(e) < today), birthdays: birthdays.filter((b) => b.day < today),
+        holidays: holidays.filter((h) => h.day < today), from, to, selected: null, listFrom: from,
+      })
+    : null;
+  const pastDays = past ? [...past.keys()].sort().reverse() : [];
   const going = (id: string) => rsvps.filter((r) => r.event_id === id && r.response === "going").length;
+
+  const dayBlock = (d: string, info: NonNullable<ReturnType<typeof agenda.get>>) => (
+              <section key={d}>
+                {!selected && <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-graphite/50 first-letter:uppercase">{formatDayLong(d)}</p>}
+                <ul className="flex flex-col gap-2">
+                  {info.holidays.map((h) => (
+                    <li key={h.name} className="flex items-center gap-3 rounded-2xl bg-graphite/5 p-3 text-sm"><span className="text-lg">🇦🇷</span><span><strong>Feriado</strong> · {h.name}</span></li>
+                  ))}
+                  {info.birthdays.map((b) => (
+                    <li key={b.member_id} className="flex items-center gap-3 rounded-2xl bg-blush p-3 text-sm"><span className="text-lg">🎂</span><span>Cumple <strong>{b.name}</strong> · {b.age} años</span></li>
+                  ))}
+                  {info.events.map((e, i) => {
+                    const t = typeById.get(e.type_id);
+                    const mine = myRsvp.get(e.id);
+                    return (
+                      <li key={e.id}>
+                        <Link href={`/calendario/${e.id}`} className="flex items-center gap-3 rounded-2xl bg-white/80 p-3 transition hover:bg-white">
+                          <CategoryIcon icon={t?.icon ?? null} index={i} size="sm" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold">{e.title}</span>
+                            <span className="block truncate text-xs text-graphite/55">{eventTimeLabel(e)}{e.location && ` · ${e.location}`} · {going(e.id)} van</span>
+                          </span>
+                          <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", mine === "going" ? "bg-lime" : mine === "maybe" ? "bg-powder" : mine === "no" ? "bg-graphite/10 text-graphite/60" : "bg-rose text-graphite")}>
+                            {mine ? RSVP_LABEL[mine] : "¿Vas?"}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+  );
 
   return (
     <>
@@ -92,46 +135,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         </div>
       </section>
 
-      <h2 className="mt-8 mb-3 font-display text-xl">{selected ? formatDayLong(selected) : "Próximos en " + formatMonth(month).toLowerCase()}</h2>
+      <h2 className="mt-8 mb-3 font-display text-xl">{selected ? formatDayLong(selected) : `${month < today.slice(0, 7) ? "En" : "Próximos en"} ${formatMonth(month).toLowerCase()}`}</h2>
       {agendaDays.length === 0 ? (
         <p className="rounded-2xl bg-white/50 px-4 py-6 text-center text-sm text-graphite/60">{selected ? "Nada este día." : "Nada por ahora. ¡Proponé un plan!"}</p>
       ) : (
-        <div className="flex flex-col gap-5">
-          {agendaDays.map((d) => {
-            const info = agenda.get(d)!;
-            return (
-              <section key={d}>
-                {!selected && <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-graphite/50 first-letter:uppercase">{formatDayLong(d)}</p>}
-                <ul className="flex flex-col gap-2">
-                  {info.holidays.map((h) => (
-                    <li key={h.name} className="flex items-center gap-3 rounded-2xl bg-graphite/5 p-3 text-sm"><span className="text-lg">🇦🇷</span><span><strong>Feriado</strong> · {h.name}</span></li>
-                  ))}
-                  {info.birthdays.map((b) => (
-                    <li key={b.member_id} className="flex items-center gap-3 rounded-2xl bg-blush p-3 text-sm"><span className="text-lg">🎂</span><span>Cumple <strong>{b.name}</strong> · {b.age} años</span></li>
-                  ))}
-                  {info.events.map((e, i) => {
-                    const t = typeById.get(e.type_id);
-                    const mine = myRsvp.get(e.id);
-                    return (
-                      <li key={e.id}>
-                        <Link href={`/calendario/${e.id}`} className="flex items-center gap-3 rounded-2xl bg-white/80 p-3 transition hover:bg-white">
-                          <CategoryIcon icon={t?.icon ?? null} index={i} size="sm" />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate font-semibold">{e.title}</span>
-                            <span className="block truncate text-xs text-graphite/55">{eventTimeLabel(e)}{e.location && ` · ${e.location}`} · {going(e.id)} van</span>
-                          </span>
-                          <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", mine === "going" ? "bg-lime" : mine === "maybe" ? "bg-powder" : mine === "no" ? "bg-graphite/10 text-graphite/60" : "bg-rose text-graphite")}>
-                            {mine ? RSVP_LABEL[mine] : "¿Vas?"}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
+        <div className="flex flex-col gap-5">{agendaDays.map((d) => dayBlock(d, agenda.get(d)!))}</div>
+      )}
+      {pastDays.length > 0 && (
+        <>
+          <h2 className="mt-10 mb-3 font-display text-xl text-graphite/70">Ya pasaron este mes</h2>
+          <div className="flex flex-col gap-5 opacity-80">{pastDays.map((d) => dayBlock(d, past!.get(d)!))}</div>
+        </>
       )}
     </>
   );
