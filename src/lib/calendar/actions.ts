@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { FormState } from "@/lib/expenses/actions";
 import { arToIso, type Rsvp } from "./types";
+import { todayAR } from "@/lib/dates";
 import { notifyNewEvent } from "@/lib/push/calendar-daily";
 import { pushConfigured } from "@/lib/push/send";
 
@@ -63,7 +64,9 @@ export async function createEvent(_: FormState, fd: FormData): Promise<FormState
   });
   if (error) return { error: error.message };
   const { data: { user } } = await supabase.auth.getUser();
-  if (user && pushConfigured()) after(() => notifyNewEvent(data as string, user.id).then(() => undefined).catch(() => {}));
+  // Si ya pasó (lo cargan para el registro), no avisamos "¡se armó un plan!".
+  const alreadyHappened = p.data.end_date < todayAR();
+  if (user && pushConfigured() && !alreadyHappened) after(() => notifyNewEvent(data as string, user.id).then(() => undefined).catch(() => {}));
   revalidatePath("/calendario");
   redirect(`/calendario/${data}`);
 }

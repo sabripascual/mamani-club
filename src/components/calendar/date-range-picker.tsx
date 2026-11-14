@@ -16,12 +16,13 @@ export const dayLabel = (d: string) => DAY.format(new Date(`${d}T12:00:00Z`)).re
 /**
  * Un solo calendario para elegir de qué día a qué día: tocás el inicio y después el fin
  * (si tocás un día anterior al inicio, empieza de nuevo desde ahí). Un día = tocalo dos veces
- * o dejalo así.
+ * o dejalo así. Se pueden elegir días que ya pasaron (algo que ya ocurrió); arranca
+ * mostrando `initialMonth` (el mes actual al crear).
  */
-export function DateRangePicker({ start, end, min, onChange }: {
-  start: string; end: string; min?: string; onChange: (start: string, end: string) => void;
+export function DateRangePicker({ start, end, initialMonth, min, onChange }: {
+  start: string; end: string; initialMonth?: string; min?: string; onChange: (start: string, end: string) => void;
 }) {
-  const [month, setMonth] = useState(start.slice(0, 7));
+  const [month, setMonth] = useState((initialMonth ?? start).slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
   const [y, m] = month.split("-").map(Number);
   const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
