@@ -23,6 +23,11 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmed, setConfirmed] = useState<string | null>(defaultValue?.trim() || null);
   const typed = useRef(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  // Al abrir el mapa, que quede entero a la vista (lejos del botón flotante de guardar).
+  useEffect(() => {
+    if (mapOpen) mapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [mapOpen]);
   const q = value.trim();
 
   // Busca 350 ms después de la última tecla (solo si la persona escribió).
@@ -65,6 +70,9 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
           onChange={(e) => { typed.current = true; setValue(e.target.value); setConfirmed(null); setSelected(null); }}
           onFocus={() => results.length && setListOpen(true)}
           onBlur={() => setTimeout(() => setListOpen(false), 300)}
+          // "Ir"/Enter del teclado: elige la primera sugerencia, nunca envía el formulario.
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (listOpen && results[0]) choose(results[0]); } }}
+          enterKeyHint="search"
           hint="Escribí la dirección o el lugar y elegí una opción." />
         {searching && <Loader2 className="absolute top-[2.65rem] right-4 size-4 animate-spin text-graphite/40" />}
         {listOpen && results.length > 0 && (
@@ -101,16 +109,17 @@ export function LocationField({ name, defaultValue, placeholder, error }: { name
         </p>
       )}
       {mapOpen && q && (
-        <div className="overflow-hidden rounded-2xl ring-1 ring-graphite/10">
-          <iframe title={`Mapa: ${q}`} src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=16&output=embed`}
-            className="h-56 w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+        <div ref={mapRef} className="scroll-my-24 overflow-hidden rounded-2xl ring-1 ring-graphite/10">
+          {/* Confirmar arriba del mapa: abajo quedaba debajo del botón flotante de guardar. */}
           <div className="flex items-center justify-between gap-2 bg-white px-3 py-2">
-            <a href={mapsUrl(q)} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-rose-dark">Abrir en Google Maps ↗</a>
+            <a href={mapsUrl(q)} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-rose-dark">Abrir en Maps ↗</a>
             <button type="button" onClick={() => { setConfirmed(q); setMapOpen(false); }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-graphite px-4 text-xs font-semibold text-cream">
+              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-lime px-4 text-xs font-semibold text-graphite ring-2 ring-rose">
               <Check className="size-4" /> Confirmar ubicación
             </button>
           </div>
+          <iframe title={`Mapa: ${q}`} src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=16&output=embed`}
+            className="h-56 w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
         </div>
       )}
     </div>
