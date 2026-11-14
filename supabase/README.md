@@ -24,7 +24,8 @@
 | 0013_eventos_horario.sql | Eventos de todo el día y con hora de fin | ✅ |
 | 0014_roedor.sql | Cantidad de avisos de deuda enviados por integrante (ranking "El roedor") | ✅ |
 | 0015_eventos_desde_hasta_y_cron.sql | Eventos desde/hasta (varios días) y registro de corridas del cron | ✅ |
-| 0016_cuotitas.sql | Las Cuotitas: compras con tarjeta en cuotas y préstamos, tarjetas (solo marca) | ⏳ |
+| 0016_cuotitas.sql | Las Cuotitas: compras con tarjeta en cuotas y préstamos, tarjetas (solo marca) | ✅ |
+| 0017_arreglo_cuotitas_safeupdate.sql | Arreglo: cargar cuotitas desde la app ("DELETE requires a WHERE clause") | ⏳ |
 
 ## Correr las pruebas localmente
 
@@ -40,5 +41,5 @@ PGHOST=localhost PGUSER=postgres npm run test:db
 
 | Script | Para qué |
 |---|---|
-| `borrar-datos-de-prueba.sql` | Borra juntadas, gastos, eventos, fotos (registros), notificaciones y auditoría. Conserva usuarias, alias, dispositivos, categorías y configuración. Después vaciar el bucket `photos` desde Storage. |
+| `borrar-datos-de-prueba.sql` | Borra juntadas, gastos, eventos, fotos (registros), cuotitas, notificaciones, corridas del cron y auditoría. Conserva usuarias, alias, tarjetas, dispositivos, categorías y configuración. Después vaciar el bucket `photos` desde Storage. |
 | `categorias-de-gasto-nuevas.sql` | Reemplaza las categorías de gasto por Bebida, Comida, Entradas, Transporte, Golosinas y Otro (sin subcategorías). Correr después del anterior. |
