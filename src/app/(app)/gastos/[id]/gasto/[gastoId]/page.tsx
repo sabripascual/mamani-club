@@ -62,8 +62,8 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
       <header className="mb-6 flex items-start gap-4">
         <CategoryIcon icon={cat?.icon ?? null} />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-dark">{cat?.name}</p>
-          <h1 className="mt-1 font-display text-[1.9rem] leading-tight font-semibold">{sub?.name ?? g.title}</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-dark">{cat?.name}{sub ? ` › ${sub.name}` : ""}</p>
+          <h1 className="mt-1 font-display text-[1.9rem] leading-tight font-semibold">{g.title}</h1>
           {g.status === "void" && <p className="mt-1 text-sm text-rose-dark">Gasto quitado{g.void_reason ? `: ${g.void_reason}` : ""}</p>}
         </div>
         {canEdit && (
