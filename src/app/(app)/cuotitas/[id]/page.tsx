@@ -5,7 +5,7 @@ import { ArrowLeft, CreditCard, HandCoins, Pencil } from "lucide-react";
 import { requireActiveMember } from "@/lib/auth/session";
 import { getMembers } from "@/lib/expenses/queries";
 import { getCuotita } from "@/lib/cuotitas/queries";
-import { KIND_LABEL, monthLabel, monthOf } from "@/lib/cuotitas/types";
+import { KIND_LABEL, monthLabel, monthOf, monthShort } from "@/lib/cuotitas/types";
 import { getAliases } from "@/lib/profile/aliases";
 import { formatMoney } from "@/lib/money/format";
 import { formatTimestamp, todayAR } from "@/lib/dates";
@@ -32,7 +32,11 @@ export default async function CuotitaPage({ params, searchParams }: { params: Pr
   const month = monthOf(todayAR());
   const alias = c.refund_alias ?? (await getAliases([c.paid_by])).get(c.paid_by)?.[0]?.alias ?? null;
   const paidCount = installments.filter((i) => i.paid_at).length;
-  const pendingCents = installments.filter((i) => !i.paid_at).reduce((a, i) => a + i.amount_cents, 0);
+  const pendingOf = (list: typeof installments) => list.filter((i) => !i.paid_at).reduce((a, i) => a + i.amount_cents, 0);
+  const pendingCents = pendingOf(installments);
+  const myPending = pendingOf(installments.filter((i) => i.member_id === me));
+  const myLeft = installments.filter((i) => i.member_id === me && !i.paid_at).length;
+  const lent = installments.reduce((a, i) => a + i.amount_cents, 0); // lo que pagó por las demás
   const debtors = [...new Set(installments.map((i) => i.member_id))];
   const Icon = c.kind === "tarjeta" ? CreditCard : HandCoins;
 
@@ -63,10 +67,24 @@ export default async function CuotitaPage({ params, searchParams }: { params: Pr
           <div>
             <p className="text-sm text-graphite/60">Total</p>
             <p className="font-display text-4xl font-semibold tabular-nums">{formatMoney(c.total_cents)}</p>
-            <p className="text-xs text-graphite/55">{c.installments} {c.installments === 1 ? "cuota" : "cuotas"} · {paidCount} de {installments.length} pagadas</p>
+            <p className="text-xs text-graphite/55">{c.installments} {c.installments === 1 ? "cuota" : "cuotas"} por persona · {paidCount} de {installments.length} pagadas entre todas</p>
           </div>
-          {pendingCents > 0 && active && <p className="text-right text-sm"><span className="block text-graphite/60">Falta</span><strong className="tabular-nums">{formatMoney(pendingCents)}</strong></p>}
         </div>
+        {active && (c.paid_by === me ? (
+          <div className="mt-4 rounded-2xl bg-powder/60 p-3">
+            <p className="text-sm font-semibold">Plata que vuelve 💸</p>
+            <p className="font-display text-2xl font-semibold tabular-nums">{pendingCents ? formatMoney(pendingCents) : "¡Recuperaste todo! 🤑"}</p>
+            <p className="text-xs text-graphite/60">{pendingCents ? `Te falta recuperar de ${formatMoney(lent)} que pusiste por las demás.` : `Te devolvieron los ${formatMoney(lent)}.`}</p>
+          </div>
+        ) : myLeft > 0 || installments.some((i) => i.member_id === me) ? (
+          <div className="mt-4 rounded-2xl bg-rose/15 p-3">
+            <p className="text-sm font-semibold">Tu deuda cuotitera 🐀</p>
+            <p className="font-display text-2xl font-semibold tabular-nums">{myPending ? formatMoney(myPending) : "¡Pagaste todo! 🤑"}</p>
+            <p className="text-xs text-graphite/60">{myPending ? `Te ${myLeft === 1 ? "falta 1 cuota" : `faltan ${myLeft} cuotas`} para ${memberName(memberById.get(c.paid_by))}.` : "No le debés nada en esta cuotita."}</p>
+          </div>
+        ) : pendingCents > 0 && (
+          <p className="mt-4 text-sm text-graphite/65">Faltan pagar <strong className="tabular-nums">{formatMoney(pendingCents)}</strong> entre todas.</p>
+        ))}
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-cream/80 p-3 text-sm">
           <MemberAvatar m={memberById.get(c.paid_by)} />
           <div className="min-w-0 flex-1">
@@ -105,15 +123,18 @@ export default async function CuotitaPage({ params, searchParams }: { params: Pr
                   const late = !i.paid_at && i.due_month < month;
                   const now = i.due_month === month;
                   return (
-                    <li key={i.id} className="flex items-center gap-3 py-2 text-sm">
-                      <span className="w-14 shrink-0 text-xs font-semibold text-graphite/55">{i.number}/{c.installments}</span>
-                      <span className={`min-w-0 flex-1 ${now ? "font-semibold" : ""}`}>
-                        {monthLabel(i.due_month)}
-                        {late && <span className="ml-1 text-xs font-semibold text-rose-dark">atrasada</span>}
-                        {now && !i.paid_at && <span className="ml-1 text-xs font-semibold text-rose-dark">este mes</span>}
-                      </span>
-                      <span className="tabular-nums">{formatMoney(i.amount_cents)}</span>
-                      <span className="w-6 text-center" role="img" aria-label={i.paid_at ? "pagada" : "pendiente"}>{i.paid_at ? "🤑" : i.due_month <= month ? "🐀" : "·"}</span>
+                    <li key={i.id} className="flex items-center gap-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs text-graphite/55">
+                          Cuota {i.number}/{c.installments} · <span className={now ? "font-semibold text-graphite" : ""}>{monthShort(i.due_month)}</span>
+                        </p>
+                        <p className="flex flex-wrap items-center gap-x-1.5 font-semibold tabular-nums">
+                          {formatMoney(i.amount_cents)}
+                          {i.paid_at ? <span role="img" aria-label="pagada">🤑</span> : i.due_month <= month && <span role="img" aria-label="debe">🐀</span>}
+                          {late && <span className="text-xs font-semibold text-rose-dark">atrasada</span>}
+                          {now && !i.paid_at && <span className="text-xs font-semibold text-rose-dark">este mes</span>}
+                        </p>
+                      </div>
                       {canMark && (i.paid_at
                         ? <UnpayInstallmentButton id={i.id} cuotitaId={c.id} />
                         : <PayInstallmentsButton ids={[i.id]} cuotitaId={c.id} toMe={me === c.paid_by} small label={me === c.paid_by ? "Me pagó" : "Pagado"} />)}

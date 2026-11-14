@@ -58,6 +58,11 @@ export function monthLabel(month: string) {
   const [y, m] = month.split("-").map(Number);
   return `${MONTHS[m - 1]} ${y}`;
 }
+/** "2026-12-01" → "Dic 2026" (para filas angostas). */
+export function monthShort(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return `${MONTHS[m - 1].slice(0, 3)} ${y}`;
+}
 /** Primer día del mes de una fecha "AAAA-MM-DD". */
 export const monthOf = (day: string) => `${day.slice(0, 7)}-01`;
 
