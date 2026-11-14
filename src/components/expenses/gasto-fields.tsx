@@ -56,6 +56,12 @@ export function GastoFields({
   const f = (k: string) => errors[n(k)];
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? "");
   const [subcategoryId, setSubcategoryId] = useState(initial?.subcategory_id ?? "");
+  const [customTitle, setCustomTitle] = useState(() => {
+    if (!initial) return "";
+    const cat = categories.find((c) => c.id === initial.category_id);
+    const auto = cat?.children.find((c) => c.id === initial.subcategory_id)?.name ?? cat?.name ?? "";
+    return initial.title === auto ? "" : initial.title;
+  });
   const [amount, setAmount] = useState(initial ? centsToInput(initial.amount_cents) : "");
   const [paidBy, setPaidBy] = useState(initial?.paid_by ?? meId);
   const [participants, setParticipants] = useState<string[]>(initial?.shares.map((s) => s.member_id) ?? defaultParticipants);
@@ -76,6 +82,8 @@ export function GastoFields({
   const amountCents = parseMoney(amount);
   const selectedCategory = categories.find((c) => c.id === categoryId);
   const selectedSub = selectedCategory?.children.find((c) => c.id === subcategoryId);
+  // Nombre del gasto: el que escriban; si no, la subcategoría (o la categoría si no tiene).
+  const autoName = selectedSub?.name ?? (selectedCategory && selectedCategory.children.length === 0 ? selectedCategory.name : "");
   const preview = amountCents ? equalSplit(amountCents, [...participants, ...guests.map(guestUnit)]) : new Map<string, number>();
   const cents = (v?: string) => (v?.trim() === "0" ? 0 : (parseMoney(v ?? "") ?? 0));
   const customSum = participants.reduce((acc, id) => acc + cents(custom[id]), 0) + guests.reduce((acc, g) => acc + cents(custom[`guest:${g.key}`]), 0);
@@ -103,8 +111,7 @@ export function GastoFields({
       <fieldset>
         <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Qué pagaste reina?</legend>
         <input type="hidden" name={n("category_id")} value={categoryId} />
-        {/* El nombre del gasto es la subcategoría elegida (o la categoría si no tiene). */}
-        <input type="hidden" name={n("title")} value={selectedSub?.name ?? (selectedCategory && selectedCategory.children.length === 0 ? selectedCategory.name : "")} />
+        <input type="hidden" name={n("title")} value={customTitle.trim() || autoName} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {categories.map((c, i) => (
             <button type="button" key={c.id} onClick={() => { setCategoryId(c.id); setSubcategoryId(""); }} aria-pressed={categoryId === c.id}
@@ -135,6 +142,16 @@ export function GastoFields({
           </div>
         )}
       </fieldset>
+
+      <Field
+        label="Nombre del gasto (opcional)"
+        id={n("title_custom")}
+        value={customTitle}
+        onChange={(e) => setCustomTitle(e.target.value)}
+        maxLength={80}
+        placeholder="Ej: Vacío y chorizos de la carnicería"
+        hint={autoName ? `Si lo dejás vacío, se llama “${autoName}”.` : "Para que el grupo sepa rápido qué fue."}
+      />
 
       <Field
         label="Importe"
@@ -315,7 +332,7 @@ export function GastoFields({
 
       <div className="flex flex-col gap-1.5">
           <label htmlFor={n("description")} className="text-sm font-semibold text-graphite/80">Detalle <span className="font-normal text-graphite/50">(opcional)</span></label>
-          <textarea id={n("description")} name={n("description")} rows={2} maxLength={500} defaultValue={initial?.description ?? ""} placeholder="Ej: 3 kg de vacío y chorizos"
+          <textarea id={n("description")} name={n("description")} rows={2} maxLength={500} defaultValue={initial?.description ?? ""} placeholder="Algo más para contar"
             className="rounded-2xl border border-graphite/10 bg-white/70 px-4 py-3 text-base outline-none focus:border-rose focus:bg-white focus:ring-4 focus:ring-rose/15" />
         </div>
     </div>
