@@ -40,5 +40,5 @@ PGHOST=localhost PGUSER=postgres npm run test:db
 
 | Script | Para qué |
 |---|---|
-| `borrar-datos-de-prueba.sql` | Borra juntadas, gastos, eventos, fotos (registros), notificaciones y auditoría. Conserva usuarias, alias, dispositivos, categorías y configuración. Después vaciar el bucket `photos` desde Storage. |
+| `borrar-datos-de-prueba.sql` | Borra juntadas, gastos, eventos, fotos (registros), cuotitas, notificaciones, corridas del cron y auditoría. Conserva usuarias, alias, tarjetas, dispositivos, categorías y configuración. Después vaciar el bucket `photos` desde Storage. |
 | `categorias-de-gasto-nuevas.sql` | Reemplaza las categorías de gasto por Bebida, Comida, Entradas, Transporte, Golosinas y Otro (sin subcategorías). Correr después del anterior. |
