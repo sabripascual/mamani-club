@@ -10,6 +10,12 @@ const AR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Bueno
 type Planned = { kind: string; member_id: string; juntada_id: string | null; ref_id?: string; step: number; title: string; body: string; url: string; tag: string };
 
 /** Corrida diaria (10:00 AR): deudas entre integrantes y deudas de invitadas (a su responsable). */
+/** Resumen legible por tipo: "Deudas 2/2 · Cobros 1/1". */
+export function describeByKind(byKind: Record<string, { planned: number; sent: number }>) {
+  const NAMES: Record<string, string> = { debtor: "Deudas", creditor: "Cobros", guest_debt: "Invitadas" };
+  return Object.entries(byKind).map(([k, v]) => `${NAMES[k] ?? k} ${v.sent}/${v.planned}`).join(" · ");
+}
+
 export async function runDailyNotifications(today = AR.format(new Date())) {
   const admin = createAdminClient();
 
@@ -23,7 +29,7 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
   ]);
   const failed = e1 ?? e2 ?? e3 ?? e4;
   if (failed) throw new Error(`No se pudieron leer las deudas: ${failed.message}`);
-  if (!transfers?.length && !guestDebts?.length) return { planned: 0, sent: 0 };
+  if (!transfers?.length && !guestDebts?.length) return { planned: 0, sent: 0, byKind: {} as Record<string, { planned: number; sent: number }> };
 
   const ids = [...new Set([...(transfers ?? []), ...(guestDebts ?? [])].map((t) => t.juntada_id as string))];
   const [{ data: juntadas }, { data: members }] = await Promise.all([
@@ -78,6 +84,9 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
   ];
 
   let sent = 0;
+  // Por tipo, para el panel: así se ve si, por ejemplo, los avisos de cobro no salen.
+  const byKind: Record<string, { planned: number; sent: number }> = {};
+  for (const p of plan) (byKind[p.kind] ??= { planned: 0, sent: 0 }).planned++;
   for (const p of plan) {
     // 1) Reservar el envío (índice único por día): si el cron corre dos veces, no duplica.
     const { data: row, error } = await admin
@@ -92,7 +101,8 @@ export async function runDailyNotifications(today = AR.format(new Date())) {
     else {
       await admin.from("notification_log").update({ devices: delivered }).eq("id", row.id);
       sent++;
+      byKind[p.kind].sent++;
     }
   }
-  return { planned: plan.length, sent };
+  return { planned: plan.length, sent, byKind };
 }

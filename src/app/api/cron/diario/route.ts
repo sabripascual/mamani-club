@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runDailyNotifications } from "@/lib/push/daily";
+import { describeByKind, runDailyNotifications } from "@/lib/push/daily";
 import { pushConfigured } from "@/lib/push/send";
 import { runEventEve } from "@/lib/push/calendar-daily";
 import { ensureHolidays } from "@/lib/calendar/holidays";
@@ -39,6 +39,7 @@ export async function GET(request: Request) {
     const cuotitas = await runCuotitaReminders();
     await logCronRun("diario", {
       ok: true, planned: result.planned + eve.planned + cuotitas.planned, sent: result.sent + eve.sent + cuotitas.sent,
+      detail: [describeByKind(result.byKind), `Cuotitas ${cuotitas.sent}/${cuotitas.planned}`, `Eventos ${eve.sent}/${eve.planned}`].filter(Boolean).join(" · "),
     });
     return NextResponse.json({ ok: true, ...result, eventos: eve, cuotitas });
   } catch (e) {
