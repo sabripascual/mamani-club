@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/session";
 import { pushConfigured } from "@/lib/push/send";
 import { sendBroadcast } from "@/lib/push/calendar-daily";
-import { runDailyNotifications } from "@/lib/push/daily";
+import { describeByKind, runDailyNotifications } from "@/lib/push/daily";
 import { runCuotitaReminders } from "@/lib/push/cuotitas-alerts";
 import { logCronRun } from "@/lib/push/cron-log";
 
@@ -64,7 +64,7 @@ export async function runDebtRemindersNow(): Promise<NResult & { planned?: numbe
     const d = await runDailyNotifications();
     const q = await runCuotitaReminders();
     const r = { planned: d.planned + q.planned, sent: d.sent + q.sent };
-    await logCronRun("manual", { ok: true, ...r });
+    await logCronRun("manual", { ok: true, ...r, detail: [describeByKind(d.byKind), `Cuotitas ${q.sent}/${q.planned}`].filter(Boolean).join(" · ") });
     revalidatePath("/admin/notificaciones");
     return { ok: true, sent: r.sent, planned: r.planned };
   } catch (e) {
