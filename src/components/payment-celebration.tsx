@@ -12,7 +12,7 @@ const PIECES = Array.from({ length: 18 }, (_, i) => {
 export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, onDone }: { message?: string; subtitle?: string; onDone: () => void }) {
   useEffect(() => {
     navigator.vibrate?.(40);
-    const t = setTimeout(onDone, 5000);
+    const t = setTimeout(onDone, 4000);
     return () => clearTimeout(t);
   }, [onDone]);
 
@@ -22,7 +22,7 @@ export function PaymentCelebration({ message = "¡Gracias perrita!", subtitle, o
       aria-live="polite"
       onClick={onDone}
       className="mc-anim fixed inset-0 z-[70] flex cursor-pointer items-center justify-center bg-cream/70 px-[max(1.5rem,env(safe-area-inset-left))] backdrop-blur-sm"
-      style={{ animation: "mc-fade 5s ease-out forwards" }}
+      style={{ animation: "mc-fade 4s ease-out forwards" }}
     >
       <div className="relative flex w-full max-w-sm flex-col items-center text-center" style={{ animation: "mc-pop 0.5s cubic-bezier(.2,1.4,.4,1) both" }}>
         {PIECES.map((p, i) => (

@@ -53,6 +53,8 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
   // Una juntada saldada no admite gastos nuevos (la base también lo impide).
   const canAddGasto = active && status?.settlement_status !== "settled";
   const sharesBy = (gastoId: string) => shares.filter((s) => s.expense_id === gastoId && s.is_participant);
+  // 🐀 mientras debe algo en la juntada; 🤑 cuando ya está a mano.
+  const owesSet = new Set(transfers.map((t) => t.from_member));
   const inSomeGasto = new Set([...shares.filter((s) => s.is_participant).map((s) => s.member_id), ...gastos.map((g) => g.paid_by)]);
 
   return (
@@ -227,7 +229,12 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
             return (
               <li key={a} className="flex items-center gap-2 rounded-full bg-white/60 py-1 pr-2 pl-1">
                 <MemberAvatar m={memberById.get(a)} />
-                <span className="text-sm font-semibold">{memberName(memberById.get(a), me)}</span>
+                <span className="text-sm font-semibold">
+                  {memberName(memberById.get(a), me)}
+                  {active && inSomeGasto.has(a) && (owesSet.has(a)
+                    ? <span className="ml-1" role="img" aria-label="debe" title="Debe">🐀</span>
+                    : <span className="ml-1" role="img" aria-label="pagó" title="Pagó">🤑</span>)}
+                </span>
                 {n && n.net_cents !== 0 && (
                   <span className={`text-xs font-semibold tabular-nums ${n.net_cents < 0 ? "text-rose-dark" : "text-graphite/60"}`}>
                     {n.net_cents < 0 ? "−" : "+"}{formatMoney(Math.abs(n.net_cents), j.currency, { round: true })}

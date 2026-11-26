@@ -33,9 +33,16 @@ export function pushConfigured() {
  * dispositivos que ya no existen (el navegador los dio de baja). Devuelve a
  * cuántos llegó.
  */
-export async function sendToMember(memberId: string, payload: PushPayload, subs?: Sub[]) {
+export async function sendToMember(memberId: string, payload: PushPayload, subs?: Sub[], opts: { inbox?: boolean } = {}) {
   if (!configure()) throw new Error("Faltan las claves VAPID");
   const admin = createAdminClient();
+  // Queda guardada en la campanita (salvo la de prueba). Si falla, igual se manda el push.
+  if (opts.inbox !== false) {
+    const url = payload.url.startsWith("/") ? payload.url : "/";
+    await admin.from("member_notifications")
+      .insert({ member_id: memberId, title: payload.title.slice(0, 200), body: payload.body.slice(0, 1000), url, tag: payload.tag.slice(0, 100) })
+      .then(({ error }) => { if (error) console.error("[bandeja]", error.message); });
+  }
   const list = subs ?? ((await admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", memberId)).data ?? []);
   let delivered = 0;
   await Promise.all(

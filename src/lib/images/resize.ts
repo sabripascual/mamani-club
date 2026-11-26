@@ -22,7 +22,8 @@ export async function resizeImageWithSize(
   if (square) {
     const side = Math.min(sw, sh);
     sx = (sw - side) / 2;
-    sy = (sh - side) / 2;
+    // En fotos verticales la cara suele estar arriba: recortamos más de abajo que de arriba.
+    sy = sh > sw ? (sh - side) * 0.25 : (sh - side) / 2;
     sw = sh = side;
   }
   const scale = Math.min(1, maxSize / Math.max(sw, sh));
