@@ -4,6 +4,8 @@ import { BottomNav, SideNav } from "@/components/nav/app-nav";
 import { pendingRequestsCount } from "@/lib/admin/pending";
 import { CelebrationHost } from "@/components/payment-celebration";
 import { Footer } from "@/components/footer";
+import { PushOnboarding } from "@/components/pwa/push-onboarding";
+import { vapidPublicKey } from "@/lib/push/send";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </main>
       <BottomNav pendingRequests={pending} />
       <CelebrationHost />
+      {/* Paso obligatorio: activar las notificaciones en este dispositivo. */}
+      <PushOnboarding vapidKey={vapidPublicKey()} />
     </div>
   );
 }
