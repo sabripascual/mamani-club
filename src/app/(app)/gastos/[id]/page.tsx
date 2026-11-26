@@ -96,11 +96,41 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
         )}
       </Card>
 
+      {/* Saldo de cada una (como Tricount): lo que puso menos lo que le toca, sumando todos los gastos. */}
+      {active && gastos.length > 0 && nets.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-1 font-display text-xl">Cómo quedó cada una</h2>
+          <p className="mb-3 text-xs text-graphite/55">
+            Se suman todos los gastos: lo que <strong>puso</strong> cada una menos lo que le <strong>toca</strong>. En rojo, quien tiene que pagar; en verde, quien tiene que cobrar.
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {[...nets].sort((a, b) => a.net_cents - b.net_cents).map((n) => {
+              const moved = n.sent_cents - n.received_cents;
+              return (
+                <li key={n.member_id} className={`flex items-center gap-3 rounded-2xl p-2.5 ${n.member_id === me ? "bg-white ring-1 ring-rose/40" : "bg-white/55"}`}>
+                  <MemberAvatar m={memberById.get(n.member_id)} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{memberName(memberById.get(n.member_id), me)}</p>
+                    <p className="truncate text-xs text-graphite/55 tabular-nums">
+                      Puso {formatMoney(n.paid_cents, j.currency, { round: true })} · le toca {formatMoney(n.consumed_cents, j.currency, { round: true })}
+                      {moved !== 0 && <> · {moved > 0 ? "ya transfirió" : "ya cobró"} {formatMoney(Math.abs(moved), j.currency, { round: true })}</>}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${n.net_cents < 0 ? "bg-rose/20 text-rose-dark" : n.net_cents > 0 ? "bg-lime/70" : "bg-graphite/5 text-graphite/55"}`}>
+                    {n.net_cents === 0 ? "A mano" : `${n.net_cents < 0 ? "−" : "+"}${formatMoney(Math.abs(n.net_cents), j.currency)}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {/* Cómo saldamos */}
       {active && transfers.length > 0 && (
         <section id="saldar" className="mb-8 scroll-mt-6">
           <h2 className="mb-1 font-display text-xl">Cómo saldamos</h2>
-          <p className="mb-3 text-xs text-graphite/55">La menor cantidad de transferencias para quedar todas a mano. Se recalcula si cambia un gasto.</p>
+          <p className="mb-3 text-xs text-graphite/55">Con estas transferencias quedan todas a mano (no hace falta pagar gasto por gasto). Se recalcula si cambia un gasto.</p>
           <ul className="flex flex-col gap-2">
             {transfers.map((t) => {
               const involved = me === t.from_member || me === t.to_member;
