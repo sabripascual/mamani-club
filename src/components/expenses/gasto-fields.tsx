@@ -168,10 +168,10 @@ export function GastoFields({
       <fieldset>
         <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Quién pagó este gasto?</legend>
         <input type="hidden" name={n("paid_by")} value={paidBy} />
-        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
           {selectable.map((m) => (
             <button type="button" key={m.id} onClick={() => setPaidBy(m.id)} aria-pressed={paidBy === m.id}
-              className={cn("flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold transition",
+              className={cn("flex min-w-0 flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold transition",
                 paidBy === m.id ? "bg-white ring-2 ring-graphite" : "hover:bg-white/60")}>
               <MemberAvatar m={m} size="md" />
               <span className="w-full truncate px-1 text-center">{label(m)}</span>

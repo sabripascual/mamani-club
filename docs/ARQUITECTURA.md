@@ -372,6 +372,12 @@ tests/e2e/             Playwright
     no encuentra o falla. Reemplaza la consulta directa desde el teléfono (ADR-027).
   - Filtros `or()` de PostgREST con valores que tienen ":" (horas) van entre comillas; si no,
     la consulta falla. Los errores de la consulta del calendario ahora se muestran.
+- **ADR-041** Notificaciones obligatorias: `PushOnboarding` (en el layout de la app) tapa la
+  pantalla hasta que el dispositivo tenga una suscripción push. Guía según el caso: activar,
+  instalar en el inicio (iPhone desde Safari) o habilitar en ajustes (bloqueadas). Si el
+  navegador no soporta push, no bloquea. Lógica compartida con el perfil en `usePush`.
+- **ADR-042** Selectores de integrantes en grilla (4 por fila en el teléfono) en vez de una fila
+  con desplazamiento: con 12+ integrantes se ven todas sin deslizar.
 
 ## 10. Riesgos y limitaciones conocidas
 
