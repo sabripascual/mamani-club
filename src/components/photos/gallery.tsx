@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Heart, Loader2, MessageCircle, Send, Trash2,
 import { addComment, deleteComment, deletePhoto, listComments, toggleLike, type CommentItem } from "@/lib/photos/actions";
 import type { PhotoItem } from "@/lib/photos/queries";
 import { cn } from "@/lib/utils";
+import { FadeImg } from "@/components/ui/fade-img";
 import { Avatar } from "@/components/ui/avatar";
 
 export type MiniMember = { name: string; initials: string; avatar_url: string | null };
@@ -39,8 +40,7 @@ export function Gallery({
               aria-label={`Abrir foto de ${members[p.uploaded_by]?.name ?? "alguien"}`}
             >
               {p.thumb_url && (
-                // eslint-disable-next-line @next/next/no-img-element -- URL firmada de un bucket privado
-                <img src={p.thumb_url} alt="" loading="lazy" decoding="async" className="size-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                <FadeImg src={p.thumb_url} alt="" loading="lazy" className="size-full object-cover group-hover:scale-[1.03]" />
               )}
               {(p.likes > 0 || p.comments > 0) && (
                 <span className="absolute right-1.5 bottom-1.5 inline-flex items-center gap-1.5 rounded-full bg-graphite/60 px-2 py-0.5 text-[11px] font-semibold text-cream backdrop-blur">

@@ -15,6 +15,13 @@ import { CopyAlias } from "@/components/copy-alias";
 import { GuestPaidButton, SettleButton } from "../../actions-client";
 import { refundAliasFor } from "@/lib/expenses/refund-alias";
 
+/** 🐀 al lado del nombre mientras debe; 🤑 cuando ya está a mano. */
+function Status({ owes }: { owes: boolean }) {
+  return owes
+    ? <span className="ml-1.5" role="img" aria-label="debe" title="Debe">🐀</span>
+    : <span className="ml-1.5" role="img" aria-label="pagó" title="Pagó">🤑</span>;
+}
+
 export const metadata: Metadata = { title: "Gasto · MAMANÍ CLUB" };
 
 /** Detalle de un gasto en solo lectura (todas). Editar: quien lo cargó, la responsable de una invitada o una admin. */
@@ -44,9 +51,10 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
     .map((t) => ({ ...t, amount_cents: Number(t.amount_cents) }));
   // 🐀 = todavía debe en la juntada (o la invitada no pagó); 🤑 = está a mano.
   const debtors = new Set(transfers.map((t) => t.from_member));
-  // Para registrar "Pagado" desde acá: lo que cada deudora me tiene que transferir a mí (o, si soy admin, a quien sea).
+  // Para registrar "Pagado" desde acá: lo que cada deudora me tiene que transferir a mí (un solo botón por deudora;
+  // las admins marcan cualquier transferencia desde "Cómo saldamos" en la juntada).
   const toSettle = (memberId: string) => juntada?.status === "active"
-    ? transfers.filter((t) => t.from_member === memberId && t.from_member !== me && (t.to_member === me || profile.role === "admin"))
+    ? transfers.filter((t) => t.from_member === memberId && t.from_member !== me && t.to_member === me)
       .map((t) => ({ ...t, amount_cents: Number(t.amount_cents) }))
     : [];
   const isAdmin = profile.role === "admin";
@@ -117,18 +125,17 @@ export default async function GastoPage({ params }: { params: Promise<{ id: stri
               <span className="flex min-w-0 items-center gap-3">
                 <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-lime text-xs font-bold">{s.guest_name.charAt(0).toUpperCase()}</span>
                 <span className="min-w-0 leading-tight">
-                  <span className="block truncate font-semibold">{s.guest_name}{!s.guest_paid_at && <span className="ml-1.5" role="img" aria-label="debe" title="Debe">🐀</span>}</span>
+                  <span className="block truncate font-semibold">{s.guest_name}<Status owes={!s.guest_paid_at} /></span>
                   <span className="block truncate text-xs text-graphite/55">{s.member_id === me ? "tu invitada" : `invitada de ${memberName(memberById.get(s.member_id))}`} · le paga a {memberName(memberById.get(g.paid_by), me)}</span>
                 </span>
               </span>
             ) : (
               <span className="flex items-center gap-3"><MemberAvatar m={memberById.get(s.member_id)} />
-                <span className="font-semibold">{memberName(memberById.get(s.member_id), me)}{debtors.has(s.member_id) && <span className="ml-1.5" role="img" aria-label="debe" title="Debe">🐀</span>}</span>
+                <span className="font-semibold">{memberName(memberById.get(s.member_id), me)}<Status owes={debtors.has(s.member_id)} /></span>
               </span>
             )}
             <span className="flex shrink-0 items-center gap-2">
               <span className="font-semibold tabular-nums">{formatMoney(s.amount_cents, g.currency)}</span>
-              {(s.guest_name ? !!s.guest_paid_at : !debtors.has(s.member_id)) && <span className="text-lg leading-none" role="img" aria-label="pagó" title="Pagó">🤑</span>}
               {!s.guest_name && toSettle(s.member_id).map((t) => (
                 <SettleButton key={t.to_member} juntadaId={id} from={t.from_member} to={t.to_member} amountCents={t.amount_cents} alias={aliasOf(t.to_member) ?? undefined} meId={me} />
               ))}

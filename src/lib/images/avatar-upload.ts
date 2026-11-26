@@ -9,7 +9,7 @@ export async function uploadMyAvatar(file: File) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Sin sesión");
 
-  const blob = await resizeImage(file, { maxSize: 512, square: true });
+  const blob = await resizeImage(file, { maxSize: 384, quality: 0.8, square: true });
   const ext = blob.type === "image/webp" ? "webp" : "jpg";
   const path = `${user.id}/avatar-${Date.now()}.${ext}`;
 

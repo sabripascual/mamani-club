@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Camera, Heart, MessageCircle, Images } from "lucide-react";
 import { formatDay } from "@/lib/dates";
+import { FadeImg } from "@/components/ui/fade-img";
 import type { AlbumSummary } from "@/lib/photos/queries";
 
 /** "Manija Memories": álbumes reales, más recientes primero, con scroll horizontal. */
@@ -25,8 +26,7 @@ export function MemoriesCarousel({ albums }: { albums: AlbumSummary[] }) {
                 className={`group relative block overflow-hidden rounded-[1.75rem] bg-blush ${i === 0 ? "h-72 w-60" : "h-72 w-48"}`}
               >
                 {a.cover_url && (
-                  // eslint-disable-next-line @next/next/no-img-element -- URL firmada de un bucket privado
-                  <img src={a.cover_url} alt="" loading={i < 2 ? "eager" : "lazy"} className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105" />
+                  <FadeImg src={a.cover_url} alt="" loading={i < 2 ? "eager" : "lazy"} className="absolute inset-0 size-full object-cover group-hover:scale-105" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-graphite/85 via-graphite/10 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4 text-cream">

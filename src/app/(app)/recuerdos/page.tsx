@@ -5,6 +5,7 @@ import { requireActiveMember } from "@/lib/auth/session";
 import { getAlbums } from "@/lib/photos/queries";
 import { formatDay, formatMonth } from "@/lib/dates";
 import { PageHeader } from "@/components/ui/page-header";
+import { FadeImg } from "@/components/ui/fade-img";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export const metadata: Metadata = { title: "Manija Memories · MAMANÍ CLUB" };
@@ -33,8 +34,7 @@ export default async function MemoriesPage() {
                   <li key={a.expense_id}>
                     <Link href={`/recuerdos/${a.expense_id}`} className="group relative block aspect-[4/5] overflow-hidden rounded-[var(--radius-card)] bg-blush">
                       {a.cover_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.cover_url} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105" />
+                        <FadeImg src={a.cover_url} alt="" loading="lazy" className="absolute inset-0 size-full object-cover group-hover:scale-105" />
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-graphite/80 to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 p-3 text-cream">

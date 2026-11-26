@@ -25,18 +25,21 @@ import { YearMonthFilter } from "@/components/stats/year-month-filter";
 import { Dashboard } from "@/components/stats/dashboard";
 import { PersonalDashboard } from "@/components/stats/personal-dashboard";
 import { ViewToggle } from "@/components/stats/view-toggle";
+import { NotificationBell } from "@/components/notifications/bell";
+import { bellCount } from "@/lib/notifications/queries";
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<PeriodParams & { vista?: string }> }) {
   const sp = await searchParams;
   const { profile } = await requireActiveMember();
   const today = todayAR();
   // Todo en una sola tanda de consultas en paralelo.
-  const [dataset, balances, { byId }, albums, recent, pendingRequests, myAvatar, cumples, cuotitas] = await Promise.all([
+  const [dataset, balances, { byId }, albums, recent, pendingRequests, myAvatar, cumples, cuotitas, bell] = await Promise.all([
     loadDataset(), getMemberBalances(profile.id), getMembers(), getAlbums({ limit: 12 }), listJuntadas({}, 3),
     profile.role === "admin" ? pendingRequestsCount() : Promise.resolve(0),
     signAvatarUrls([profile.avatar_path]).then((m) => (profile.avatar_path ? (m.get(profile.avatar_path) ?? null) : null)),
     birthdaysToday(today),
     myCuotitasMonth(profile.id, `${today.slice(0, 7)}-01`),
+    bellCount(profile.id),
   ]);
   const mine = balances.find((b) => b.currency === "ARS");
   // ¿Fui a las últimas juntadas? Sale de los datos de las estadísticas (sin otra consulta).
@@ -46,7 +49,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <>
       <header className="mb-6">
-        <Wordmark className="w-56 sm:w-64" priority />
+        <div className="flex items-start justify-between gap-3">
+          <Wordmark className="w-56 sm:w-64" priority />
+          <NotificationBell count={bell} />
+        </div>
         <Link href="/perfil" className="mt-4 flex items-center gap-3">
           <Avatar src={myAvatar} initials={initials(profile)} size="md" className="ring-rose" />
           <span>

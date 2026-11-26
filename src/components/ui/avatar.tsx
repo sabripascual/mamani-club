@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { FadeImg } from "./fade-img";
 
 const sizes = { sm: "size-9 text-xs", md: "size-12 text-sm", lg: "size-24 text-2xl" };
 
@@ -23,8 +24,7 @@ export function Avatar({
       )}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- URL firmada de Supabase, de vida corta
-        <img src={src} alt="" className="size-full object-cover" />
+        <FadeImg src={src} alt="" className="size-full object-cover" />
       ) : (
         initials
       )}

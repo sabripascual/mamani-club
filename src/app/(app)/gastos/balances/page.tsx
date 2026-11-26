@@ -49,23 +49,57 @@ export default async function BalancesPage() {
         const suggested = simplifyDebts(curDebts.map((d) => ({ from: d.debtor_id, to: d.creditor_id, amount: d.amount_cents })));
         const mine = balances.find((b) => b.currency === cur && b.member_id === me);
         const pendingTotal = curDebts.reduce((a, d) => a + d.amount_cents, 0);
+        const myDebts = curDebts.filter((d) => d.debtor_id === me);
+        const owedToMe = curDebts.filter((d) => d.creditor_id === me);
 
         return (
           <section key={cur} className="mb-10">
             {currencies.length > 1 && <h2 className="mb-3 font-display text-2xl">{cur}</h2>}
 
-            <div className="mb-6 grid grid-cols-2 gap-3">
-              <Card className="bg-rose/20">
-                <p className="text-sm text-graphite/65">Debés</p>
-                <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(mine?.i_owe_cents ?? 0, cur)}</p>
-              </Card>
-              <Card className="bg-powder/45">
-                <p className="text-sm text-graphite/65">Te deben</p>
-                <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(mine?.owed_to_me_cents ?? 0, cur)}</p>
-              </Card>
+            {/* Lo de cada una primero: a quién le debés vos (y quién te debe a vos). */}
+            <div className="mb-4 rounded-[var(--radius-card)] bg-rose/25 p-4 ring-1 ring-rose/30">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-display text-xl">Lo que vos debés</h3>
+                <span className="font-display text-2xl font-semibold tabular-nums">{formatMoney(mine?.i_owe_cents ?? 0, cur)}</span>
+              </div>
+              {myDebts.length === 0 ? (
+                <p className="mt-1 text-sm text-graphite/65">No le debés nada a nadie 🤑</p>
+              ) : (
+                <ul className="mt-3 flex flex-col gap-2">
+                  {myDebts.map((d) => (
+                    <li key={d.creditor_id}>
+                      <Link href={`/gastos?integrante=${me}`} className="flex items-center gap-3 rounded-2xl bg-white/85 p-3 transition hover:bg-white">
+                        <MemberAvatar m={byId.get(d.creditor_id)} />
+                        <p className="min-w-0 flex-1 truncate text-sm">Le debés a <strong>{memberName(byId.get(d.creditor_id), me)}</strong></p>
+                        <span className="shrink-0 text-right">
+                          <span className="block font-semibold tabular-nums">{formatMoney(d.amount_cents, cur)}</span>
+                          <span className="text-[11px] text-graphite/50">{d.juntadas} {d.juntadas === 1 ? "juntada" : "juntadas"}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="mb-8 rounded-[var(--radius-card)] bg-powder/45 p-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-display text-lg">Te deben</h3>
+                <span className="font-display text-xl font-semibold tabular-nums">{formatMoney(mine?.owed_to_me_cents ?? 0, cur)}</span>
+              </div>
+              {owedToMe.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1 text-sm">
+                  {owedToMe.map((d) => (
+                    <li key={d.debtor_id} className="flex items-center gap-2">
+                      <MemberAvatar m={byId.get(d.debtor_id)} />
+                      <span className="min-w-0 flex-1 truncate">{memberName(byId.get(d.debtor_id), me)}</span>
+                      <span className="shrink-0 font-semibold tabular-nums">{formatMoney(d.amount_cents, cur)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
-            <h3 className="mb-1 font-display text-xl">Quién le debe a quién</h3>
+            <h3 className="mb-1 font-display text-xl">Deudas de todo el grupo</h3>
             <p className="mb-3 text-sm text-graphite/55">
               {curDebts.length === 0 ? "¡Todo saldado! 🎉" : `Pendiente total del grupo: ${formatMoney(pendingTotal, cur)}`}
             </p>
