@@ -39,7 +39,7 @@ export function RankingCard({ r, byId, me }: { r: Ranking; byId: Map<string, Mem
                   </p>
                 ) : (
                   <p className="flex items-center gap-1 text-sm font-semibold">
-                    <Crown className="size-4 shrink-0 text-rose-dark" strokeWidth={1.8} /> Empate entre {winners.length}
+                    <Crown className="size-4 shrink-0 text-rose-dark" strokeWidth={1.8} /> <span className="whitespace-nowrap">Empate de {winners.length}</span>
                   </p>
                 )}
                 {r.rows[0].detail && winners.length === 1 && <p className="truncate text-xs text-graphite/55">{r.rows[0].detail}</p>}
