@@ -47,6 +47,6 @@ export async function sendTestNotification(): Promise<PushResult> {
     body: "Así te van a llegar los recordatorios de MAMANÍ CLUB.",
     url: "/perfil",
     tag: "prueba",
-  }, subs, { inbox: false });
+  }, subs);
   return delivered > 0 ? { ok: true } : { ok: false, error: "No llegó a ningún dispositivo. Probá desactivar y volver a activar." };
 }

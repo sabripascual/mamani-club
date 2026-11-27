@@ -27,9 +27,11 @@ export async function bellCount(me: string) {
   return (count ?? 0) + pending.length;
 }
 
-export async function listInbox(me: string, limit = 60): Promise<InboxItem[]> {
+/** Últimas notificaciones. `missing`: la tabla todavía no existe (falta correr la migración 0019). */
+export async function listInbox(me: string, limit = 60): Promise<{ items: InboxItem[]; missing: boolean }> {
   const supabase = await createClient();
-  const { data } = await supabase.from("member_notifications").select("id, title, body, url, created_at, read_at")
+  const { data, error } = await supabase.from("member_notifications").select("id, title, body, url, created_at, read_at")
     .eq("member_id", me).order("created_at", { ascending: false }).limit(limit).returns<InboxItem[]>();
-  return data ?? [];
+  if (error) console.error("[bandeja]", error.message);
+  return { items: data ?? [], missing: !!error && /member_notifications|does not exist|schema cache/i.test(error.message) };
 }
