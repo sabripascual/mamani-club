@@ -1,6 +1,8 @@
 "use client";
 
-import { Bell, Check, Loader2, RefreshCw, Share, SquarePlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, Bell, Check, Loader2, RefreshCw, Share, SquarePlus } from "lucide-react";
 import { actionButtonClass } from "@/components/ui/action-card";
 import { cn } from "@/lib/utils";
 import { usePush } from "./use-push";
@@ -13,8 +15,25 @@ import { usePush } from "./use-push";
  */
 export function PushOnboarding({ vapidKey }: { vapidKey: string | null }) {
   const { state, msg, pending, enable, recheck } = usePush(vapidKey);
+  const router = useRouter();
+  const [closed, setClosed] = useState(false);
+  const [granted, setGranted] = useState(false);
+  useEffect(() => {
+    try { if (sessionStorage.getItem("mc:push-ok") === "1") setClosed(true); } catch {}
+    if ("Notification" in window) setGranted(Notification.permission === "granted");
+  }, [state, msg]);
+  // Al quedar activadas, se cierra solo y vuelve al inicio.
+  useEffect(() => {
+    if (state === "on" && msg?.tone === "ok") close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, msg]);
+  function close() {
+    try { sessionStorage.setItem("mc:push-ok", "1"); } catch {}
+    setClosed(true);
+    router.replace("/");
+  }
   // Solo en producción (en desarrollo no hay service worker) y con el servidor configurado.
-  if (process.env.NODE_ENV !== "production" || !vapidKey) return null;
+  if (process.env.NODE_ENV !== "production" || !vapidKey || closed) return null;
   if (state === "loading" || state === "on" || state === "unsupported") return null;
 
   return (
@@ -67,6 +86,11 @@ export function PushOnboarding({ vapidKey }: { vapidKey: string | null }) {
         )}
 
         {msg && <p className={cn("mt-4 text-sm", msg.tone === "error" ? "text-rose-dark" : "text-graphite/70")}>{msg.text}</p>}
+        {granted && !pending && (
+          <button type="button" onClick={close} className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white font-semibold ring-1 ring-graphite/15">
+            Listo, ir al inicio <ArrowRight className="size-4" />
+          </button>
+        )}
         <p className="mt-8 text-xs text-graphite/50">Las podés probar después desde tu perfil.</p>
       </div>
     </div>
