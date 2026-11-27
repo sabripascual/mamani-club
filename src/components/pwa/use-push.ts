@@ -11,6 +11,11 @@ function urlBase64ToUint8Array(base64: string) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+/** Corta una espera que en algunos teléfonos nunca termina (service worker trabado). */
+function withTimeout<T>(p: Promise<T>, ms = 15000) {
+  return Promise.race([p, new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+}
+
 /**
  * Estado de las notificaciones en ESTE dispositivo y cómo activarlas/desactivarlas.
  * Lo usan el perfil y el paso obligatorio del onboarding.
@@ -43,9 +48,10 @@ export function usePush(vapidKey: string | null) {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return setState(permission === "denied" ? "denied" : "off");
         const reg = (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.register("/sw.js"));
-        await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
-        const res = await saveSubscription(sub.toJSON() as never, navigator.userAgent);
+        await withTimeout(navigator.serviceWorker.ready);
+        const sub = (await reg.pushManager.getSubscription())
+          ?? (await withTimeout(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) })));
+        const res = await withTimeout(saveSubscription(sub.toJSON() as never, navigator.userAgent));
         if (!res.ok) {
           await sub.unsubscribe();
           return setMsg({ tone: "error", text: res.error ?? "No se pudo activar" });
@@ -53,7 +59,10 @@ export function usePush(vapidKey: string | null) {
         setState("on");
         setMsg({ tone: "ok", text: "¡Listo! Te van a llegar los recordatorios a las 10 de la mañana." });
       } catch {
-        setMsg({ tone: "error", text: "No se pudo activar en este dispositivo." });
+        // Si el permiso quedó dado, igual se puede seguir (se reintenta desde el perfil).
+        setMsg({ tone: "error", text: Notification.permission === "granted"
+          ? "El permiso está dado pero tardó en conectar. Podés seguir y probarlas desde tu perfil."
+          : "No se pudo activar en este dispositivo." });
       }
     });
   }
