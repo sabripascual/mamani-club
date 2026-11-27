@@ -11,6 +11,9 @@ import { todayAR } from "@/lib/dates";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MarkRead } from "@/components/notifications/mark-read";
+import { LiveRefresh } from "@/components/notifications/live-refresh";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Notificaciones · MAMANÍ CLUB" };
 
@@ -31,7 +34,7 @@ export default async function NotificacionesPage() {
   const { profile } = await requireActiveMember();
   const me = profile.id;
   const today = todayAR();
-  const [inbox, pending, balances, cumples] = await Promise.all([
+  const [{ items: inbox, missing }, pending, balances, cumples] = await Promise.all([
     listInbox(me), pendingRsvps(me), getMemberBalances(me), birthdaysToday(today),
   ]);
   const owe = balances.filter((b) => b.i_owe_cents > 0);
@@ -41,6 +44,7 @@ export default async function NotificacionesPage() {
   return (
     <>
       <MarkRead unread={unread} />
+      <LiveRefresh onMount />
       <Link href="/" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-graphite/60 hover:text-graphite">
         <ArrowLeft className="size-4" /> Inicio
       </Link>
@@ -90,6 +94,9 @@ export default async function NotificacionesPage() {
       )}
 
       <h2 className="mb-3 font-display text-xl">Recientes</h2>
+      {missing && profile.role === "admin" && (
+        <p className="mb-3 rounded-2xl bg-rose/25 p-3 text-sm">Falta correr en Supabase la migración <strong>0019_bandeja_notificaciones.sql</strong>: hasta entonces las notificaciones no se guardan acá.</p>
+      )}
       {inbox.length === 0 ? (
         <EmptyState icon={Bell} title="Todavía no hay notificaciones">Acá se van a juntar todos los avisos que te lleguen.</EmptyState>
       ) : (

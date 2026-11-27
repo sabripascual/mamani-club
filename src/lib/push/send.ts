@@ -36,7 +36,7 @@ export function pushConfigured() {
 export async function sendToMember(memberId: string, payload: PushPayload, subs?: Sub[], opts: { inbox?: boolean } = {}) {
   if (!configure()) throw new Error("Faltan las claves VAPID");
   const admin = createAdminClient();
-  // Queda guardada en la campanita (salvo la de prueba). Si falla, igual se manda el push.
+  // Queda guardada en la campanita. Si falla, igual se manda el push.
   if (opts.inbox !== false) {
     const url = payload.url.startsWith("/") ? payload.url : "/";
     await admin.from("member_notifications")

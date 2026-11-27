@@ -8,7 +8,7 @@
  *   notificación (gasto, juntada, evento…), aunque la app ya esté abierta.
  * Cambiar VERSION fuerza a que las instalaciones viejas limpien su caché.
  */
-const VERSION = "v6";
+const VERSION = "v7";
 const STATIC_CACHE = `mamani-static-${VERSION}`;
 // La pantalla sin conexión, con sus fuentes y el logo (tienen que estar antes de perder la red).
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/fonts/fredoka-latin.woff2", "/fonts/nunito-latin.woff2", "/brand/wordmark-sm.png"];
@@ -68,14 +68,19 @@ self.addEventListener("push", (event) => {
     data = { title: "MAMANÍ CLUB", body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || "MAMANÍ CLUB", {
-      body: data.body || "",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/badge-96.png",
-      tag: data.tag || undefined,
-      renotify: !!data.tag,
-      data: { url: data.url || "/" },
-    }),
+    Promise.all([
+      self.registration.showNotification(data.title || "MAMANÍ CLUB", {
+        body: data.body || "",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/badge-96.png",
+        tag: data.tag || undefined,
+        renotify: !!data.tag,
+        data: { url: data.url || "/" },
+      }),
+      // Si la app está abierta, que la campanita se actualice sola.
+      self.clients.matchAll({ type: "window", includeUncontrolled: true })
+        .then((list) => list.forEach((c) => c.postMessage({ type: "mc:push" }))),
+    ]),
   );
 });
 
