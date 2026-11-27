@@ -7,6 +7,7 @@ import { requireActiveMember } from "@/lib/auth/session";
 import { getCategories, getJuntada, getJuntadaTypes, getMembers } from "@/lib/expenses/queries";
 import { getAlbum } from "@/lib/photos/queries";
 import { toMiniMembers } from "@/lib/photos/members";
+import { AddToJuntada } from "@/components/expenses/add-to-juntada";
 import { formatMoney } from "@/lib/money/format";
 import { formatDayLong, formatTimestamp, formatDay } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
@@ -244,6 +245,11 @@ export default async function JuntadaPage({ params, searchParams }: { params: Pr
               </li>
             );
           })}
+          {active && (isAdmin || j.created_by === me || amAttendee) && (
+            <li className="flex items-center">
+              <AddToJuntada juntadaId={j.id} candidates={members.filter((m) => m.status === "active" && !attendees.includes(m.id))} />
+            </li>
+          )}
         </ul>
       </section>
 

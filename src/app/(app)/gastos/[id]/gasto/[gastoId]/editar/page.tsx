@@ -8,6 +8,7 @@ import { updateGasto } from "@/lib/expenses/actions";
 import { PageHeader } from "@/components/ui/page-header";
 import { GastoForm } from "@/components/expenses/gasto-form";
 import { getAliases } from "@/lib/profile/aliases";
+import { createClient } from "@/lib/supabase/server";
 import { VoidGastoButton } from "../../../actions-client";
 
 export const metadata: Metadata = { title: "Editar gasto · MAMANÍ CLUB" };
@@ -16,7 +17,11 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
   const { id, gastoId } = await params;
   if (!/^[0-9a-f-]{36}$/.test(gastoId)) notFound();
   const { profile } = await requireActiveMember();
-  const [data, { tree }, { members }, myAliases, knownGuests] = await Promise.all([getGasto(gastoId), getCategories(), getMembers(), getAliases([profile.id]), getJuntadaGuests(id)]);
+  const supabase = await createClient();
+  const [data, { tree }, { members }, myAliases, knownGuests, { data: att }] = await Promise.all([
+    getGasto(gastoId), getCategories(), getMembers(), getAliases([profile.id]), getJuntadaGuests(id),
+    supabase.from("juntada_attendees").select("member_id").eq("juntada_id", id),
+  ]);
   if (!data || data.gasto.juntada_id !== id) notFound();
   const { gasto: g, shares } = data;
   // La base también lo valida: quien lo cargó, quien lo pagó, la responsable de una invitada o una admin.
@@ -32,6 +37,7 @@ export default async function EditGastoPage({ params }: { params: Promise<{ id: 
         members={members}
         meId={profile.id}
         attendees={[]}
+        juntadaMembers={(att ?? []).map((a) => a.member_id as string)}
         myAliases={myAliases.get(profile.id) ?? []}
         knownGuests={knownGuests}
         initial={{

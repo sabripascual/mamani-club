@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseMoney } from "@/lib/money/format";
-import { notifyGastoLoaded, notifyGuestPaid, notifyJuntadaCreated, notifyLoadFinished, notifyPaid } from "@/lib/push/expense-alerts";
+import { notifyAddedToJuntada, notifyGastoLoaded, notifyGuestPaid, notifyJuntadaCreated, notifyLoadFinished, notifyPaid } from "@/lib/push/expense-alerts";
 
 export type FormState = { error?: string; fields?: Partial<Record<string, string>> };
 export type ActionResult = { ok: boolean; error?: string };
@@ -123,6 +123,7 @@ export async function createGasto(juntadaId: string, _: FormState, formData: For
   const { data: { user } } = await supabase.auth.getUser();
   const { data: gastoId, error } = await supabase.rpc("create_expense", { p_juntada_id: juntadaId, ...r.args });
   if (error) return gastoDbError(error.message);
+  await keepPayerInJuntada(supabase, juntadaId, parsed.data.paid_by);
   await saveRefundAlias(supabase, gastoId as string, formData);
   if (user) {
     after(() => notifyGastoLoaded(gastoId as string, juntadaId, [...parsed.data.participants, ...guests.map((g) => g.responsible_id)], user.id).catch(() => {}));
@@ -147,6 +148,7 @@ export async function updateGasto(gastoId: string, juntadaId: string, _: FormSta
   const before = new Set((prev ?? []).map((p) => key(p.member_id as string, p.guest_name as string | null)));
   const { error } = await supabase.rpc("update_expense", { p_expense_id: gastoId, ...r.args, p_reason: parsed.data.reason });
   if (error) return gastoDbError(error.message);
+  await keepPayerInJuntada(supabase, juntadaId, parsed.data.paid_by);
   await saveRefundAlias(supabase, gastoId, formData, "", prevGasto?.paid_by !== parsed.data.paid_by);
   const added = [
     ...parsed.data.participants.filter((m) => !before.has(key(m))),
@@ -251,6 +253,19 @@ export async function joinJuntada(juntadaId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** Suma integrantes a la juntada (botón "+ Sumar" en "Fueron") y les avisa. */
+export async function addToJuntada(juntadaId: string, memberIds: string[]): Promise<ActionResult> {
+  if (memberIds.length === 0) return { ok: false, error: "Elegí al menos una" };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase.rpc("add_juntada_attendees", { p_juntada_id: juntadaId, p_members: memberIds });
+  if (error) return { ok: false, error: error.message };
+  const added = ((data ?? []) as string[]).filter((m) => m !== user?.id);
+  if (user && added.length) after(() => notifyAddedToJuntada(juntadaId, added, user.id).catch(() => {}));
+  refresh(juntadaId);
+  return { ok: true };
+}
+
 export async function leaveJuntada(juntadaId: string, memberId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("leave_juntada", { p_juntada_id: juntadaId, p_member: memberId });
@@ -311,4 +326,10 @@ export async function finishLoading(juntadaId: string): Promise<ActionResult & {
   after(() => (withGastos ? notifyLoadFinished(juntadaId, user.id) : notifyJuntadaCreated(juntadaId, user.id)).catch(() => {}));
   revalidatePath("/", "layout");
   return { ok: true, title: j.title as string, withGastos };
+}
+
+/** Quien pagó un gasto también queda en la juntada (si la elegiste con "+ Sumar"). */
+async function keepPayerInJuntada(supabase: Awaited<ReturnType<typeof createClient>>, juntadaId: string, paidBy: string) {
+  const { error } = await supabase.rpc("add_juntada_attendees", { p_juntada_id: juntadaId, p_members: [paidBy] });
+  if (error) console.error("[juntada] no se pudo sumar a quien pagó:", error.message);
 }

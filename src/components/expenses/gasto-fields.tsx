@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, UserPlus, Users, X } from "lucide-react";
+import { Check, Plus, UserPlus, Users, X } from "lucide-react";
 import type { CategoryTree, Member } from "@/lib/expenses/types";
 import { centsToInput, formatMoney, parseMoney } from "@/lib/money/format";
 import { equalSplit } from "@/lib/money/split";
@@ -38,13 +38,15 @@ const guestUnit = (g: Guest) => `${g.responsible}|${g.name.trim().toLowerCase()}
  * (primer gasto) sin chocar nombres. Las participantes arrancan con las asistentes.
  */
 export function GastoFields({
-  prefix = "", categories, members, meId, defaultParticipants = [], initial, errors = {}, myAliases = [], knownGuests = [],
+  prefix = "", categories, members, meId, defaultParticipants = [], juntadaMembers, initial, errors = {}, myAliases = [], knownGuests = [],
 }: {
   prefix?: string;
   categories: CategoryTree;
   members: Member[];
   meId: string;
   defaultParticipants?: string[];
+  /** Si viene: la grilla muestra solo a las de la juntada y "+ Sumar" para elegir a otras. */
+  juntadaMembers?: string[];
   initial?: GastoInitial;
   errors?: Partial<Record<string, string>>;
   /** Mis alias, para elegir a cuál me devuelven si pagué yo. */
@@ -103,7 +105,46 @@ export function GastoFields({
     setTouched(true);
     setParticipants((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   };
-  const allActive = selectable.filter((m) => m.status === "active").map((m) => m.id);
+  // Con 12 integrantes la grilla muestra solo a las de la juntada (y a quien ya esté en el
+  // gasto); las demás se suman con "+ Sumar" y quedan en la juntada al guardar.
+  const [extra, setExtra] = useState<string[]>([]);
+  const [picking, setPicking] = useState<"payer" | "split" | null>(null);
+  const base = useMemo(() => new Set([...(juntadaMembers ?? []), ...(initial?.shares.map((s) => s.member_id) ?? []), ...(initial ? [initial.paid_by] : []), meId]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [juntadaMembers?.join(","), meId]);
+  const shown = juntadaMembers ? selectable.filter((m) => base.has(m.id) || extra.includes(m.id) || participants.includes(m.id) || m.id === paidBy) : selectable;
+  const others = juntadaMembers ? selectable.filter((m) => m.status === "active" && !shown.some((x) => x.id === m.id)) : [];
+  const addOther = (id: string) => {
+    setExtra((e) => [...e, id]);
+    if (picking === "payer") setPaidBy(id);
+    else { setTouched(true); setParticipants((p) => (p.includes(id) ? p : [...p, id])); }
+    setPicking(null);
+  };
+  const isNew = (id: string) => !!juntadaMembers && !base.has(id);
+  const addTile = (kind: "payer" | "split") => others.length > 0 && (
+    <button type="button" onClick={() => setPicking(picking === kind ? null : kind)} aria-expanded={picking === kind}
+      className="flex min-w-0 flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold text-rose-dark">
+      <span className={cn("inline-flex size-12 items-center justify-center rounded-full border-2 border-dashed border-rose bg-white", picking === kind && "bg-blush")}>
+        <Plus className="size-5" strokeWidth={2.6} />
+      </span>
+      Sumar
+    </button>
+  );
+  const othersPanel = (kind: "payer" | "split") => picking === kind && (
+    <div className="mt-2 rounded-2xl bg-white p-3 ring-1 ring-rose/30">
+      <p className="mb-2 text-xs text-graphite/60">Las demás del club. La que elijas queda sumada a la juntada al guardar.</p>
+      <div className="flex flex-wrap gap-2">
+        {others.map((m) => (
+          <button type="button" key={m.id} onClick={() => addOther(m.id)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-cream py-0.5 pr-3 pl-0.5 text-sm font-semibold ring-1 ring-graphite/10 hover:ring-rose">
+            <MemberAvatar m={m} /> {label(m)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  const newBadge = <span className="absolute top-0 left-1/2 z-10 -translate-x-1/2 rounded-full bg-lime px-1.5 text-[9px] font-bold">nueva</span>;
+  const allActive = shown.filter((m) => m.status === "active").map((m) => m.id);
   const label = (m: Member) => (m.id === meId ? "Yo" : displayName(m));
 
   return (
@@ -169,15 +210,18 @@ export function GastoFields({
         <legend className="mb-2 text-sm font-semibold text-graphite/80">¿Quién pagó este gasto?</legend>
         <input type="hidden" name={n("paid_by")} value={paidBy} />
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {selectable.map((m) => (
+          {shown.map((m) => (
             <button type="button" key={m.id} onClick={() => setPaidBy(m.id)} aria-pressed={paidBy === m.id}
-              className={cn("flex min-w-0 flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold transition",
+              className={cn("relative flex min-w-0 flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold transition",
                 paidBy === m.id ? "bg-white ring-2 ring-graphite" : "hover:bg-white/60")}>
+              {isNew(m.id) && newBadge}
               <MemberAvatar m={m} size="md" />
               <span className="w-full truncate px-1 text-center">{label(m)}</span>
             </button>
           ))}
+          {addTile("payer")}
         </div>
+        {othersPanel("payer")}
       </fieldset>
 
       {paidBy === meId && (
@@ -208,7 +252,7 @@ export function GastoFields({
         </div>
         <p className="mb-3 text-xs text-graphite/55">Solo quienes consumieron este gasto. Quien pagó puede no estar incluida.</p>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {selectable.map((m) => {
+          {shown.map((m) => {
             const on = participants.includes(m.id);
             return (
               <label key={m.id} className="relative flex cursor-pointer flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold">
@@ -217,11 +261,14 @@ export function GastoFields({
                   <MemberAvatar m={m} size="md" />
                 </span>
                 {on && <span className="absolute top-1 right-2 inline-flex size-5 items-center justify-center rounded-full bg-graphite text-cream"><Check className="size-3" strokeWidth={3} /></span>}
+                {isNew(m.id) && newBadge}
                 <span className={cn("w-full truncate text-center", !on && "text-graphite/50")}>{label(m)}</span>
               </label>
             );
           })}
+          {addTile("split")}
         </div>
+        {othersPanel("split")}
         {f("participants") && <p className="mt-1.5 text-sm text-rose-dark">{f("participants")}</p>}
       </fieldset>
 

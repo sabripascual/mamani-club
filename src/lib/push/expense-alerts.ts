@@ -206,3 +206,25 @@ export async function notifyJuntadaCreated(juntadaId: string, actorId: string) {
     }, s) : 0;
   }));
 }
+
+/** "Te sumaron a la juntada": a quienes otra integrante agregó con "+ Sumar". */
+export async function notifyAddedToJuntada(juntadaId: string, memberIds: string[], actorId: string) {
+  if (!pushConfigured() || memberIds.length === 0) return;
+  const admin = createAdminClient();
+  const [{ data: j }, { data: subs }, actor] = await Promise.all([
+    admin.from("juntadas").select("title").eq("id", juntadaId).single(),
+    admin.from("push_subscriptions").select("id, member_id, endpoint, p256dh, auth").in("member_id", memberIds),
+    nameOf(admin, actorId),
+  ]);
+  if (!j) return;
+  await Promise.all(memberIds.map((m) => {
+    const s = ((subs ?? []) as Sub[]).filter((x) => x.member_id === m);
+    return s.length ? sendToMember(m, {
+      title: `¡Te sumaron a ${j.title}! 🎉`,
+      body: `${actor} te anotó en la juntada. Desde ahora aparecés en sus gastos.`,
+      url: `/gastos/${juntadaId}`,
+      tag: `juntada-${juntadaId}`,
+    }, s) : 0;
+  }));
+}
+
